@@ -1,0 +1,20 @@
+.DS_Store
+.svn
+*.a
+*.d
+*.la
+*.so
+*.dylib
+*.lib
+*.dll
+*.o
+*.obj
+*.layout
+*.depend
+*.workspace
+
+# library
+irrKlang-1.0.4
+
+# library's binary dll on win32
+irrlicht/bin

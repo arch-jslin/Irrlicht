@@ -1,5 +1,20 @@
 ==========================================================================
-The Irrlicht Engine SDK version 1.6
+The Irrlicht Engine SDK version 1.7.1 (cubeat modified version)
+==========================================================================
+
+  NOTICE:
+  
+    This irrlicht branch is being modified to fit cubeat 
+   (http://github.com/godfat/cubeat) usage, and will be included as
+    a git submodule. All else contents of this readme.txt are left
+    unchanged.
+    
+    The most significant addition is based on a community effort to
+    provide TrueType Font rendering ability made a long time ago.
+    Therefore if you intend to build this branch, you must link it 
+    against FreeType library 2.3+. Currently the header files of FreeType 
+    2.3.12 is already included.
+ 
 ==========================================================================
 
   Welcome the Irrlicht Engine SDK.
