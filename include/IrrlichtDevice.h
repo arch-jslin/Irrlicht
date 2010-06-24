@@ -210,6 +210,12 @@ namespace irr
 		\param resize Flag whether the window should be resizable. */
 		virtual void setResizable(bool resize=false) = 0;
 
+// >> Add by uirou for IME Window start
+		virtual void focusIn(){};
+		virtual void focusOut(){};
+		virtual void updateICSpot(short x, short y, short height){};
+// << Add by uirou for IME Window end
+
 		//! Minimizes the window if possible.
 		virtual void minimizeWindow() =0;
 

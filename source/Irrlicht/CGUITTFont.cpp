@@ -452,7 +452,8 @@ s32 CGUITTFont::getWidthFromCharacter(const wchar_t c) const
 
 
 //! draws an text and clips it to the specified rectangle if wanted
-void CGUITTFont::draw(const wchar_t* text, const core::rect<s32>& position, video::SColor color, bool hcenter, bool vcenter, const core::rect<s32>* clip)
+void CGUITTFont::draw(const core::stringw& text, const core::rect<s32>& position, video::SColor color,
+                      bool hcenter, bool vcenter, const core::rect<s32>* clip)
 {
 	if (!Driver)
 		return;
@@ -467,7 +468,7 @@ void CGUITTFont::draw(const wchar_t* text, const core::rect<s32>& position, vide
 
     if (hcenter || vcenter)
 	{
-		textDimension = getDimension(text);
+		textDimension = getDimension(text.c_str());
 
 		if (hcenter)
 			offset.X = ((position.getWidth() - textDimension.Width)>>1) + offset.X;
@@ -477,10 +478,11 @@ void CGUITTFont::draw(const wchar_t* text, const core::rect<s32>& position, vide
 	}
 
 	u32 n;
+	wchar_t const* ch = text.c_str();
 
-	while(*text)
+	while(*ch)
 	{
-		n = getGlyphIndex(*text);
+		n = getGlyphIndex(*ch);
 		if ( n > 0){
 			if (AntiAlias){
 				s32 imgw = Glyphs[n-1].imgw;
@@ -523,14 +525,14 @@ void CGUITTFont::draw(const wchar_t* text, const core::rect<s32>& position, vide
 				Driver->draw2DImage(Glyphs[n-1].tex16,core::position2d<s32>(offset.X+offx,offset.Y+offy),core::rect<s32>(0,0,imgw-1,imgh-1),clip,color,true);
 			}
 // >> Modified by MadHyde for Ver.1.3 new functions begin
-			offset.X += getWidthFromCharacter(*text) + GlobalKerningWidth;
+			offset.X += getWidthFromCharacter(*ch) + GlobalKerningWidth;
 // << Modified by MadHyde for Ver.1.3 new functions end
 		} else {
 // >> Modified by MadHyde for Ver.1.3 new functions begin
-			offset.X += getWidthFromCharacter(*text) + GlobalKerningWidth;
+			offset.X += getWidthFromCharacter(*ch) + GlobalKerningWidth;
 // << Modified by MadHyde for Ver.1.3 new functions end
 		}
-		++text;
+		++ch;
 	}
 }
 

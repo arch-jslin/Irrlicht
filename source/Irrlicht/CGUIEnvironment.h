@@ -13,6 +13,9 @@
 #include "irrArray.h"
 #include "IFileSystem.h"
 #include "IOSOperator.h"
+// >> add by zgock for Multilingual start
+#include "CGUITTFont.h"
+// << add by zgock for Multilingual end
 
 namespace irr
 {
@@ -76,6 +79,12 @@ public:
 
 	//! returns the font
 	virtual IGUIFont* getFont(const io::path& filename);
+
+// >> add by zgock for Multilingual start
+// >> modified by arch_jslin 2010.06.25 changed type from c8* to io::path
+	//! returns the font
+	virtual IGUITTFont* getFont(const io::path& name, u32 fontsize);
+// << add by zgock for Multilingual end
 
 	//! add an externally loaded font
 	virtual IGUIFont* addFont(const io::path& name, IGUIFont* font);
@@ -267,6 +276,36 @@ private:
 		}
 	};
 
+// >> add by zgock for Multilingual start
+// >> modified by arch_jslin 2010.06.25 changed property type from stringc to SNamedPath
+	struct STTFace
+	{
+		io::SNamedPath NamedPath;
+		CGUITTFace* Face;
+
+		bool operator < (const STTFace& other) const
+		{
+			return (NamedPath < other.NamedPath);
+		}
+	};
+
+	struct STTFont
+	{
+		io::SNamedPath NamedPath;
+		u32 size;
+		CGUITTFont* Font;
+
+		bool operator < (const STTFont& other) const
+		{
+			if (NamedPath.getInternalName() != other.NamedPath.getInternalName()){
+				return (NamedPath < other.NamedPath);
+			} else {
+				return (size < other.size);
+			}
+		}
+	};
+// << add by zgock for Multilingual end
+
 	struct SSpriteBank
 	{
 		io::SNamedPath NamedPath;
@@ -292,6 +331,10 @@ private:
 	core::array<IGUIElementFactory*> GUIElementFactoryList;
 
 	core::array<SFont> Fonts;
+// >> add by zgock for Multilingual start
+	core::array<STTFace> Faces;
+	core::array<STTFont> TTFonts;
+// << add by zgock for Multilingual end
 	core::array<SSpriteBank> Banks;
 	video::IVideoDriver* Driver;
 	IGUIElement* Hovered;

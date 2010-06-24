@@ -18,7 +18,7 @@ public:
 	//! destructor
 	virtual ~IGUITTFont() {}
 
-// added by arch_jslin 2008.11.02
+// >> added by arch_jslin 2008.11.02
     virtual u32 getFontSize() const =0;
     virtual void setAntiAlias(bool const& flag) = 0;
     virtual void setTransparent(bool const& flag) = 0;

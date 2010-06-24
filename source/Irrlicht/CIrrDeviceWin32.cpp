@@ -17,6 +17,14 @@
 #include "dimension2d.h"
 #include <winuser.h>
 
+// >> add by zgock for Multilingual start
+#include "irrlicht.h"
+#include <stdlib.h>
+#include <locale.h>
+#include <imm.h>
+//#pragma comment(lib, "imm32.lib")
+// << add by zgock for Multilingual end
+
 namespace irr
 {
 	namespace video
@@ -244,6 +252,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	#define WHEEL_DELTA 120
 	#endif
 
+// >> add by uirou for IME Window start
+	static int mouse_capture = 0;
+// << add by uirou for IME Window end
+
 	irr::CIrrDeviceWin32* dev = 0;
 	irr::SEvent event;
 
@@ -345,6 +357,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				}
 			}
 		}
+
+// >> modified by arch_jslin 2009.03.26
+// >> add by uirou for IME Window start
+        if( m->group == 0 ) {         // down
+            mouse_capture++;
+            SetCapture(hWnd);
+        }
+// << add by uirou for IME Window end
+// >> add by uirou for IME Window start
+        else if( m->group == 1 ) {    // up
+            if(--mouse_capture <= 0){
+                mouse_capture = 0;
+                ReleaseCapture();
+            }
+        }
+// << add by uirou for IME Window end
 		return 0;
 	}
 
@@ -480,6 +508,40 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		if (dev)
 			dev->getCursorControl()->setVisible( dev->getCursorControl()->isVisible() );
 		break;
+
+// >> add by zgock for Multilingual start
+	case WM_IME_CHAR:
+		{
+			char* old_locale = setlocale(LC_ALL, NULL);
+
+			setlocale(LC_ALL,"");		// Use defalut locale
+			event.EventType = irr::EET_KEY_INPUT_EVENT;
+			event.KeyInput.PressedDown = true;
+			dev = getDeviceFromHWnd(hWnd);
+			unsigned char mbc[3];
+			wchar_t wc[2];
+// >> modified by uirou for Multilingual start
+			if(wParam > 255){
+				mbc[0] = wParam >> 8;
+				mbc[1] = wParam & 0xff;
+				mbc[2] = 0;
+			}else{
+				mbc[0] = wParam;
+				mbc[1] = mbc[2] = 0;
+			}
+// << modified by uirou for Multilingual end
+			int x = mbstowcs(wc, (char *)&mbc, MB_CUR_MAX );
+			event.KeyInput.Char = wc[0]; //KeyAsc >= 0 ? KeyAsc : 0;
+			event.KeyInput.Key = irr::KEY_ACCEPT;
+			event.KeyInput.Shift = 0;
+			event.KeyInput.Control = 0;
+			if (dev)	dev->postEventFromUser(event);
+
+			setlocale(LC_ALL, old_locale);
+
+			return	0;
+		}
+// << add by zgock for Multilingual end
 
 	case WM_INPUTLANGCHANGE:
         // get the new codepage used for keyboard input
@@ -618,6 +680,10 @@ CIrrDeviceWin32::CIrrDeviceWin32(const SIrrlichtCreationParameters& params)
 	em.irrDev = this;
 	em.hWnd = HWnd;
 	EnvMap.push_back(em);
+
+// >> add by uirou for IME Window start
+	GUIEnvironment->setDevice(this);
+// << add by uirou for IME Window end
 
 	// set this as active window
 	SetActiveWindow(HWnd);
@@ -1532,6 +1598,21 @@ void CIrrDeviceWin32::ReportLastWinApiError()
 		}
 	}
 }
+
+// >> add by uirou for IME Window start
+void CIrrDeviceWin32::updateICSpot(short x, short y, short height){
+    HIMC hIMC = ImmGetContext(HWnd);
+    //LOGFONT lf;
+    COMPOSITIONFORM cf;
+
+    cf.dwStyle = CFS_POINT;
+    cf.ptCurrentPos.x = x;
+    cf.ptCurrentPos.y = y - height;
+    ImmSetCompositionWindow(hIMC, &cf);
+
+    ImmReleaseContext(HWnd, hIMC);
+}
+// << add by uirou for IME Window end
 
 } // end namespace
 

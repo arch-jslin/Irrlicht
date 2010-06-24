@@ -1334,6 +1334,12 @@ namespace scene
 		\param node: Node to detete. */
 		virtual void addToDeletionQueue(ISceneNode* node) = 0;
 
+// >> added by arch_jslin 2007.12.4
+        //! Adds an animator(which associated with a scene node) to the deletion queue.
+        /** You would probably never use this method outside of the scope of
+            the animator classes, it's simply required for self-removing animators. */
+        virtual void addToAnimatorDeletionQueue(ISceneNodeAnimator* anim, ISceneNode* node) = 0;
+
 		//! Posts an input event to the environment.
 		/** Usually you do not have to
 		use this method, it is used by the internal engine. */

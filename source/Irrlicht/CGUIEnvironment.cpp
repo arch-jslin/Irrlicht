@@ -36,6 +36,10 @@
 #include "CGUIToolBar.h"
 #include "CGUITable.h"
 
+// >> add by uirou for IME Window start
+#include "IrrCompileConfig.h"
+// << add by uirou for IME Window end
+
 #include "CDefaultGUIElementFactory.h"
 #include "IWriteFile.h"
 #include "IXMLWriter.h"
@@ -157,6 +161,14 @@ CGUIEnvironment::~CGUIEnvironment()
 	// delete all fonts
 	for (i=0; i<Fonts.size(); ++i)
 		Fonts[i].Font->drop();
+
+// >> add by zgock for Multilingual start
+	for (i=0; i<TTFonts.size(); ++i)
+		TTFonts[i].Font->drop();
+
+	for (i=0; i<Faces.size(); ++i)
+		Faces[i].Face->drop();
+// << add by zgock for Multilingual end
 
 	// remove all factories
 	for (i=0; i<GUIElementFactoryList.size(); ++i)
@@ -1250,6 +1262,10 @@ IGUIEditBox* CGUIEnvironment::addEditBox(const wchar_t* text,
 	IGUIEditBox* d = new CGUIEditBox(text, border, this,
 			parent ? parent : this, id, rectangle);
 
+// >> add by uirou for IME Window start
+	d->setDevice(dev);
+// << add by uirou for IME Window end
+
 	d->drop();
 	return d;
 }
@@ -1490,6 +1506,56 @@ IGUIFont* CGUIEnvironment::getBuiltInFont() const
 	return Fonts[0].Font;
 }
 
+// >> add by zgock for Multilingual start
+// modified by arch_jslin 2008.11.02 (IGUIFont -> IGUITTFont)
+// modified by arch_jslin 2010.06.25 changed argument type from stringc to io::path
+//! returns the font
+IGUITTFont* CGUIEnvironment::getFont(const io::path& name, u32 fontsize)
+{
+	// search existing font
+
+	STTFace f;
+	STTFont tf;
+
+	f.NamedPath.setPath(name);
+
+	s32 index = Faces.binary_search(f);
+	if (index == -1){
+		f.Face = new CGUITTFace();
+		if (f.Face->load(f.NamedPath.getInternalName().c_str())){
+			Faces.push_back(f);
+			index = Faces.binary_search(f);
+		} else {
+			f.Face->drop();
+			return	0;
+		}
+	}
+	STTFace *face = &Faces[index];
+
+	tf.NamedPath.setPath( face->NamedPath.getPath() );
+	tf.size = fontsize;
+	index = TTFonts.binary_search(tf);
+	if (index != -1){
+		return TTFonts[index].Font;
+	}
+
+    // not existing yet. try to load font.
+
+	CGUITTFont* font = new CGUITTFont(this);
+	if (!font->attach(face->Face,fontsize))
+	{
+		font->drop();
+		return 0;
+	}
+
+	// add to fonts.
+
+	tf.Font = font;
+	TTFonts.push_back(tf);
+
+	return font;
+}
+// << add by zgock for Multilingual end
 
 IGUISpriteBank* CGUIEnvironment::getSpriteBank(const io::path& filename)
 {

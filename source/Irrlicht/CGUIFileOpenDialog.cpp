@@ -16,6 +16,10 @@
 #include "IGUIFontBitmap.h"
 #include "IFileList.h"
 #include "os.h"
+// >> add by zgock for Multilingual start
+#include "stdlib.h"
+#include "locale.h"
+// << add by zgock for Multilingual end
 
 namespace irr
 {

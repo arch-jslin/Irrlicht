@@ -330,6 +330,10 @@ namespace irr
 		//! returns the win32 cursor control
 		CCursorControl* getWin32CursorControl();
 
+// >> Add by uirou for IME Window start
+		virtual void updateICSpot(short x, short y, short height);
+// << Add by uirou for IME Window end
+
 	private:
 
 		//! create the driver

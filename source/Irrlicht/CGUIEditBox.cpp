@@ -12,6 +12,10 @@
 #include "rect.h"
 #include "os.h"
 #include "Keycodes.h"
+// >> Add by zgock for Multilingual start
+#include <stdlib.h>
+#include <locale.h>
+// << Add by zgock for Multilingual end
 
 /*
 	todo:
@@ -262,9 +266,22 @@ bool CGUIEditBox::processKey(const SEvent& event)
 				const s32 realmbgn = MarkBegin < MarkEnd ? MarkBegin : MarkEnd;
 				const s32 realmend = MarkBegin < MarkEnd ? MarkEnd : MarkBegin;
 
-				core::stringc s;
-				s = Text.subString(realmbgn, realmend - realmbgn).c_str();
-				Operator->copyToClipboard(s.c_str());
+//				core::stringc s;
+//				s = Text.subString(realmbgn, realmend - realmbgn).c_str();
+//				Operator->copyToClipboard(s.c_str());
+// >> modified by zgock for Multilingual start
+				char* old_locale = setlocale(LC_ALL, NULL);
+
+				setlocale(LC_ALL,"");
+				int len = wcstombs(NULL,Text.subString(realmbgn, realmend - realmbgn).c_str(),MB_CUR_MAX);
+				c8 *ms = new c8[len + 1];
+				len = wcstombs(ms,Text.subString(realmbgn, realmend - realmbgn).c_str(),len);
+				ms[len] = 0;
+				Operator->copyToClipboard(ms);
+				delete ms;
+
+				setlocale(LC_ALL, old_locale);
+// << modified by zgock for Multilingual end
 			}
 			break;
 		case KEY_KEY_X:
@@ -275,9 +292,22 @@ bool CGUIEditBox::processKey(const SEvent& event)
 				const s32 realmend = MarkBegin < MarkEnd ? MarkEnd : MarkBegin;
 
 				// copy
-				core::stringc sc;
-				sc = Text.subString(realmbgn, realmend - realmbgn).c_str();
-				Operator->copyToClipboard(sc.c_str());
+//				core::stringc sc;
+//				sc = Text.subString(realmbgn, realmend - realmbgn).c_str();
+//				Operator->copyToClipboard(sc.c_str());
+// >> modified by zgock for Multilingual start
+				char* old_locale = setlocale(LC_ALL, NULL);
+
+				setlocale(LC_ALL,"");
+				int len = wcstombs(NULL,Text.subString(realmbgn, realmend - realmbgn).c_str(),MB_CUR_MAX);
+				c8 *ms = new c8[len + 1];
+				len = wcstombs(ms,Text.subString(realmbgn, realmend - realmbgn).c_str(),len);
+				ms[len] = 0;
+				Operator->copyToClipboard(ms);
+				delete ms;
+
+				setlocale(LC_ALL, old_locale);
+// << modified by zgock for Multilingual end
 
 				if (IsEnabled)
 				{
@@ -308,17 +338,31 @@ bool CGUIEditBox::processKey(const SEvent& event)
 				const c8* p = Operator->getTextFromClipboard();
 				if (p)
 				{
+// >> add by zgock for Multilingual start
+					char* old_locale = setlocale(LC_ALL, NULL);
+
+					setlocale(LC_ALL,"");
+					wchar_t *wp = new wchar_t[strlen(p) + 1];
+					int len = mbstowcs(wp,p,strlen(p));
+					wp[len] = 0;
+// << add by zgock for Multilingual end
 					if (MarkBegin == MarkEnd)
 					{
 						// insert text
 						core::stringw s = Text.subString(0, CursorPos);
-						s.append(p);
+						//s.append(p);
+// >> modified by zgock for Multilingual start
+						s.append(wp);
+// << modified by zgock for Multilingual end
 						s.append( Text.subString(CursorPos, Text.size()-CursorPos) );
 
 						if (!Max || s.size()<=Max) // thx to Fish FH for fix
 						{
 							Text = s;
-							s = p;
+							//s = p;
+// >> modified by zgock for Multilingual start
+							s = wp;
+// << modified by zgock for Multilingual end
 							CursorPos += s.size();
 						}
 					}
@@ -327,16 +371,26 @@ bool CGUIEditBox::processKey(const SEvent& event)
 						// replace text
 
 						core::stringw s = Text.subString(0, realmbgn);
-						s.append(p);
+						//s.append(p);
+// >> modified by zgock for Multilingual start
+						s.append(wp);
+// << modified by zgock for Multilingual end
 						s.append( Text.subString(realmend, Text.size()-realmend) );
 
 						if (!Max || s.size()<=Max)  // thx to Fish FH for fix
 						{
 							Text = s;
-							s = p;
+							//s = p;
+// >> modified by zgock for Multilingual start
+							s = wp;
+// << modified by zgock for Multilingual end
 							CursorPos = realmbgn + s.size();
 						}
 					}
+// >> modified by zgock for Multilingual start
+					delete wp;
+					setlocale(LC_ALL, old_locale);
+// << modified by zgock for Multilingual end
 				}
 
 				newMarkBegin = 0;
@@ -942,12 +996,24 @@ u32 CGUIEditBox::getMax() const
 
 bool CGUIEditBox::processMouse(const SEvent& event)
 {
+// >> add by uirou for IME Window start
+	IGUISkin* skin = Environment->getSkin();
+	IGUIFont* font = OverrideFont;
+	if (skin && !OverrideFont)
+		font = skin->getFont();
+// << add by uirou for IME Window end
 	switch(event.MouseInput.Event)
 	{
 	case irr::EMIE_LMOUSE_LEFT_UP:
 		if (Environment->hasFocus(this))
 		{
 			CursorPos = getCursorPos(event.MouseInput.X, event.MouseInput.Y);
+// >> add by uirou for IME Window start
+			dev->focusIn();
+			dev->updateICSpot(AbsoluteRect.UpperLeftCorner.X + (Border ? 3 : 0)
+			    + font->getDimension(Text.subString(0, CursorPos - HScrollPos).c_str()).Width,
+			    AbsoluteRect.LowerRightCorner.Y, font->getDimension(L"|").Height * 2);
+// << add by uirou for IME Window end
 			if (MouseMarking)
 			{
 			    setTextMarkers( MarkBegin, CursorPos );
@@ -976,6 +1042,12 @@ bool CGUIEditBox::processMouse(const SEvent& event)
 			CursorPos = getCursorPos(event.MouseInput.X, event.MouseInput.Y);
 			setTextMarkers(CursorPos, CursorPos );
 			calculateScrollPos();
+// >> add by uirou for IME Window start
+			dev->focusIn();
+			dev->updateICSpot(AbsoluteRect.UpperLeftCorner.X + (Border ? 3 : 0)
+			    + font->getDimension(Text.subString(0, CursorPos - HScrollPos).c_str()).Width,
+			    AbsoluteRect.LowerRightCorner.Y, font->getDimension(L"|").Height * 2);
+// << add by uirou for IME Window end
 			return true;
 		}
 		else
@@ -996,6 +1068,12 @@ bool CGUIEditBox::processMouse(const SEvent& event)
 
 				MouseMarking = true;
 				setTextMarkers( newMarkBegin, CursorPos);
+// >> add by uirou for IME Window start
+			    dev->focusIn();
+			    dev->updateICSpot(AbsoluteRect.UpperLeftCorner.X + (Border ? 3 : 0)
+			        + font->getDimension(Text.subString(0, CursorPos - HScrollPos).c_str()).Width,
+			        AbsoluteRect.LowerRightCorner.Y, font->getDimension(L"|").Height * 2);
+// << add by uirou for IME Window end
 				calculateScrollPos();
 				return true;
 			}
@@ -1334,6 +1412,13 @@ void CGUIEditBox::calculateScrollPos()
 			HScrollPos = cStart - FrameRect.UpperLeftCorner.X;
 		else
 			HScrollPos = 0;
+
+// >> add by uirou for IME Window start
+	    dev->focusIn();
+	    dev->updateICSpot(AbsoluteRect.UpperLeftCorner.X + (Border ? 3 : 0)
+	        + font->getDimension(Text.subString(0, CursorPos - HScrollPos).c_str()).Width,
+	        AbsoluteRect.LowerRightCorner.Y, font->getDimension(L"|").Height * 2);
+// << add by uirou for IME Window end
 
 		// todo: adjust scrollbar
 	}

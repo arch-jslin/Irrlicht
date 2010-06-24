@@ -282,6 +282,8 @@ CSceneManager::CSceneManager(video::IVideoDriver* driver, io::IFileSystem* fs,
 //! destructor
 CSceneManager::~CSceneManager()
 {
+// >> added by arch_jslin 2008.3 for animator auto-deletion
+    clearAnimatorDeletionList();
 	clearDeletionList();
 
 	if (FileSystem)
@@ -1572,6 +1574,8 @@ void CSceneManager::drawAll()
 		LightManager->OnPostRender();
 
 	LightList.set_used(0);
+// >> added by arch_jslin 2008.3 for animator auto-deletion
+	clearAnimatorDeletionList();
 	clearDeletionList();
 
 	CurrentRendertime = ESNRP_NONE;
@@ -1788,6 +1792,21 @@ void CSceneManager::addToDeletionQueue(ISceneNode* node)
 	DeletionList.push_back(node);
 }
 
+// >> added by arch_jslin 2007.12.4
+//! Adds an animator(which is associated with a scene node) to the deletion queue.
+void CSceneManager::addToAnimatorDeletionQueue(
+    irr::scene::ISceneNodeAnimator *anim, irr::scene::ISceneNode *node)
+{
+    SAnimatorEntry e;
+    e.Node = node;
+    e.Animator = anim;
+
+    AnimatorDeletionList.push_back(e);
+
+    // grab both so that they don't get dropped while in our list
+    node->grab();
+    anim->grab();
+}
 
 //! clears the deletion list
 void CSceneManager::clearDeletionList()
@@ -1804,6 +1823,22 @@ void CSceneManager::clearDeletionList()
 	DeletionList.clear();
 }
 
+// >> added by arch_jslin 2007.12.4
+//! clears the animator deletion list
+void CSceneManager::clearAnimatorDeletionList()
+{
+    if (AnimatorDeletionList.size() != 0)
+    {
+        u32 e;
+        for (e = 0; e < AnimatorDeletionList.size(); ++e)
+        {
+            AnimatorDeletionList[e].Node->removeAnimator(AnimatorDeletionList[e].Animator);
+            AnimatorDeletionList[e].Node->drop();
+            AnimatorDeletionList[e].Animator->drop();
+        }
+        AnimatorDeletionList.clear();
+    }
+}
 
 //! Returns the first scene node with the specified name.
 ISceneNode* CSceneManager::getSceneNodeFromName(const char* name, ISceneNode* start)

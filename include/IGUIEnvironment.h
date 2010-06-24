@@ -15,6 +15,9 @@
 
 namespace irr
 {
+// >> Add by MadHyde for IMEWindow start
+	class IrrlichtDevice;
+// << Add by MadHyde for IME Window end
 	class IOSOperator;
 	class IEventReceiver;
 
@@ -36,6 +39,7 @@ namespace gui
 
 class IGUIElement;
 class IGUIFont;
+class IGUITTFont;  //added by arch_jslin 2008.11.02, tt font interface added
 class IGUISpriteBank;
 class IGUIScrollBar;
 class IGUIImage;
@@ -580,6 +584,30 @@ public:
 
 	//! reads an element
 	virtual void readGUIElement(io::IXMLReader* reader, IGUIElement* node) =0;
+
+// >> Add by zgock for Multilingual start
+	//! Returns pointer to the font with the specified file name.
+	/** Loads the font if it was not loaded before. Returns 0 if the font could not be loaded.
+	\return
+	returns a pointer to the font.
+	This pointer should not be dropped. See IReferenceCounted::drop() for more information. */
+	//modified by arch_jslin 2008.11.02
+	virtual IGUITTFont* getFont(const io::path& name, u32 fontsize) =0;
+// << Add by zgock for Multilingual end
+
+// >> Add by uirou for IME Window start
+	virtual void setDevice(void *device) { dev = (irr::IrrlichtDevice*)device; };
+// << Add by uirou for IME Window end
+
+// >> Add by MadHyde for IME Window start
+	//! constructor
+	IGUIEnvironment() : dev(NULL) {};
+
+protected:
+
+	irr::IrrlichtDevice* dev;
+// << Add by MadHyde for IME Window end
+
 };
 
 
