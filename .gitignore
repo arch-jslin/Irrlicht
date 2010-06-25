@@ -13,6 +13,7 @@
 *.layout
 *.depend
 *.workspace
+*.exe
 
 # library
 irrKlang-1.0.4
