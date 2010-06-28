@@ -123,6 +123,21 @@ namespace video
 		implemented in OpenGL. */
 		EMT_TRANSPARENT_REFLECTION_2_LAYER,
 
+// >> added by arch_jslin 2010.06.27
+        //! A transparent material based on BOTH the texture color and the material primary color.
+        /** The final color is blended together from the destination
+		color and the modulation of texture color with material primary
+		color, the src-dest blending and color modulation both using the
+		alpha channel value as the blend factor. Only first texture is used.
+		If you are using this material with small textures, it is a good
+		idea to load the texture in 32 bit mode
+		(video::IVideoDriver::setTextureCreationFlag()). Also, an alpha
+		ref is used, which can be manipulated using
+		SMaterial::MaterialTypeParam. This value controls how sharp the
+		edges become when going from a transparent to a solid spot on
+		the texture. */
+		EMT_TRANSPARENT_MODULATE,
+
 		//! A solid normal map renderer.
 		/** First texture is the color map, the second should be the
 		normal map. Note that you should use this material only when
@@ -216,6 +231,7 @@ namespace video
 		"trans_alphach_ref",
 		"trans_vertex_alpha",
 		"trans_reflection_2layer",
+		"trans_modulate", // >> added by arch_jslin 2010.06.27
 		"normalmap_solid",
 		"normalmap_trans_add",
 		"normalmap_trans_vertexalpha",
