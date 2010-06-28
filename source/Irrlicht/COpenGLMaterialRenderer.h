@@ -414,13 +414,12 @@ public:
 		bool resetAllRenderstates, IMaterialRendererServices* services)
 	{
 		Driver->disableTextures(1);
-		Driver->setActiveTexture(0, material.getTexture(0));
 		Driver->setBasicRenderStates(material, lastMaterial, resetAllRenderstates);
 
 		if (material.MaterialType != lastMaterial.MaterialType || resetAllRenderstates
 			|| material.MaterialTypeParam != lastMaterial.MaterialTypeParam )
 		{
-/*#ifdef GL_ARB_texture_env_combine
+#ifdef GL_ARB_texture_env_combine
 			glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE_ARB);
 			glTexEnvf(GL_TEXTURE_ENV, GL_COMBINE_RGB_ARB, GL_MODULATE);
 			glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE0_RGB_ARB, GL_TEXTURE);
@@ -437,9 +436,9 @@ public:
 
 			glTexEnvf(GL_TEXTURE_ENV, GL_COMBINE_ALPHA_EXT, GL_MODULATE);
 			glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE0_ALPHA_EXT, GL_TEXTURE);
-            glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE1_ALPHA_EXT, GL_DIFFUSE);
+            glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE1_ALPHA_EXT, GL_PRIMARY_COLOR_EXT);
 
-//#endif //GL_ARB_texture_env_combine
+#endif //GL_ARB_texture_env_combine
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 			glEnable(GL_BLEND);
 			glEnable(GL_ALPHA_TEST);
@@ -449,12 +448,12 @@ public:
 	}
 
 	virtual void OnUnsetMaterial() {
-/*		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 #ifdef GL_ARB_texture_env_combine
 		glTexEnvf(GL_TEXTURE_ENV, GL_COMBINE_ALPHA_ARB, GL_MODULATE );
 #else
 		glTexEnvf(GL_TEXTURE_ENV, GL_COMBINE_ALPHA_EXT, GL_MODULATE );
-#endif*/
+#endif
 		glDisable(GL_ALPHA_TEST);
 		glDisable(GL_BLEND);
 	}
