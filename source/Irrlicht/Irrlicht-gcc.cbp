@@ -74,6 +74,8 @@
 					<Add option="-DIRRLICHT_EXPORTS" />
 					<Add option="-D_CRT_SECURE_NO_DEPRECATE" />
 					<Add option="-D__GNUWIN32__" />
+					<Add option="-DUNICODE" />
+					<Add option="-D_UNICODE" />
 					<Add directory="..\..\include" />
 					<Add directory="zlib" />
 				</Compiler>
