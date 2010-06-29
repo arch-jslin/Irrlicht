@@ -35,10 +35,9 @@
 #include "CGUIMenu.h"
 #include "CGUIToolBar.h"
 #include "CGUITable.h"
-
-// >> add by uirou for IME Window start
-#include "IrrCompileConfig.h"
-// << add by uirou for IME Window end
+#if defined(_IRR_COMPILE_WITH_CGUITTFONT_) // >> IrrlichtML modification 2010.06.29
+#include "CGUITTFont.h"
+#endif // <<
 
 #include "CDefaultGUIElementFactory.h"
 #include "IWriteFile.h"
@@ -161,15 +160,13 @@ CGUIEnvironment::~CGUIEnvironment()
 	// delete all fonts
 	for (i=0; i<Fonts.size(); ++i)
 		Fonts[i].Font->drop();
-
-// >> add by zgock for Multilingual start
+// >> IrrlichtML modification 2010.06.29
+#if defined(_IRR_COMPILE_WITH_CGUITTFONT_)
+	// delete all ttfonts
 	for (i=0; i<TTFonts.size(); ++i)
 		TTFonts[i].Font->drop();
-
-	for (i=0; i<Faces.size(); ++i)
-		Faces[i].Face->drop();
-// << add by zgock for Multilingual end
-
+#endif
+// <<
 	// remove all factories
 	for (i=0; i<GUIElementFactoryList.size(); ++i)
 		GUIElementFactoryList[i]->drop();
@@ -605,6 +602,18 @@ bool CGUIEnvironment::postEventFromUser(const SEvent& event)
 			}
 		}
 		break;
+#if defined(_IRR_USE_INPUT_METHOD) // >> IrrlichtML modification 2010.06.29
+	case EET_IMPUT_METHOD_EVENT:
+		{
+			// todo : if CGUIEdit has not focus, close input method. Use WM_NOTIFY message.
+			if (Focus)
+			{
+				_IRR_IMPLEMENT_MANAGED_MARSHALLING_BUGFIX;
+				return Focus->OnEvent(event);
+			}
+		}
+		break;
+#endif // <<
 	default:
 		break;
 	} // end switch
@@ -1478,7 +1487,48 @@ IGUIFont* CGUIEnvironment::getFont(const io::path& filename)
 	return ifont;
 }
 
+// >> IrrlichtML modification 2010.06.29
+#if defined(_IRR_COMPILE_WITH_CGUITTFONT_)
+//! returns the font
+IGUITTFont* CGUIEnvironment::getFont(const io::path& name, u32 fontsize, bool antialias = true, bool transparency = true)
+{
+	// search existing font
 
+	STTFont tf;
+	tf.NamedPath.setPath(filename);
+	tf.size = fontsize;
+
+	s32 index = TTFonts.binary_search(tf);
+	if (index != -1)
+		return TTFonts[index].Font;
+
+	// font doesn't exist, attempt to load it
+
+	// does the file exist?
+
+	if (!FileSystem->existFile(filename))
+	{
+		os::Printer::log("Could not load font because the file does not exist", tf.NamedPath.getPath(), ELL_ERROR);
+		return 0;
+	}
+
+	CGUITTFont* font = CGUITTFont::create(this, tf.NamedPath.getPath(), tf.size);
+
+	if(!font)
+		return 0;
+
+	font->setTransparency(transparency);
+	font->setMonochrome(!antialias);
+
+	// add to fonts.
+
+	tf.Font = font;
+	TTFonts.push_back(tf);
+
+	return font;
+}
+#endif
+// <<
 //! add an externally loaded font
 IGUIFont* CGUIEnvironment::addFont(const io::path& name, IGUIFont* font)
 {
@@ -1506,56 +1556,6 @@ IGUIFont* CGUIEnvironment::getBuiltInFont() const
 	return Fonts[0].Font;
 }
 
-// >> add by zgock for Multilingual start
-// modified by arch_jslin 2008.11.02 (IGUIFont -> IGUITTFont)
-// modified by arch_jslin 2010.06.25 changed argument type from stringc to io::path
-//! returns the font
-IGUITTFont* CGUIEnvironment::getFont(const io::path& name, u32 fontsize)
-{
-	// search existing font
-
-	STTFace f;
-	STTFont tf;
-
-	f.NamedPath.setPath(name);
-
-	s32 index = Faces.binary_search(f);
-	if (index == -1){
-		f.Face = new CGUITTFace();
-		if (f.Face->load(f.NamedPath.getInternalName().c_str())){
-			Faces.push_back(f);
-			index = Faces.binary_search(f);
-		} else {
-			f.Face->drop();
-			return	0;
-		}
-	}
-	STTFace *face = &Faces[index];
-
-	tf.NamedPath.setPath( face->NamedPath.getPath() );
-	tf.size = fontsize;
-	index = TTFonts.binary_search(tf);
-	if (index != -1){
-		return TTFonts[index].Font;
-	}
-
-    // not existing yet. try to load font.
-
-	CGUITTFont* font = new CGUITTFont(this);
-	if (!font->attach(face->Face,fontsize))
-	{
-		font->drop();
-		return 0;
-	}
-
-	// add to fonts.
-
-	tf.Font = font;
-	TTFonts.push_back(tf);
-
-	return font;
-}
-// << add by zgock for Multilingual end
 
 IGUISpriteBank* CGUIEnvironment::getSpriteBank(const io::path& filename)
 {

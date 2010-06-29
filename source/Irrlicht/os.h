@@ -33,12 +33,20 @@ namespace os
 	{
 	public:
 		// prints out a string to the console out stdout or debug log or whatever
+// >> IrrlichtML modifications 2010.06.28
 		static void print(const c8* message);
+#if defined(_IRR_IMPROVE_UNICODE)
+		static void print(const wchar_t* message);
+#endif
 		static void log(const c8* message, ELOG_LEVEL ll = ELL_INFORMATION);
 		static void log(const wchar_t* message, ELOG_LEVEL ll = ELL_INFORMATION);
 		static void log(const c8* message, const c8* hint, ELOG_LEVEL ll = ELL_INFORMATION);
 		static void log(const c8* message, const io::path& hint, ELOG_LEVEL ll = ELL_INFORMATION);
-		static ILogger* Logger;
+#if defined(_IRR_IMPROVE_UNICODE)
+		static void log(const wchar_t* message, const wchar_t* hint, ELOG_LEVEL ll = ELL_INFORMATION);
+		static void log(const wchar_t* message, const io::path& hint, ELOG_LEVEL ll = ELL_INFORMATION);
+#endif
+// <<
 	};
 
 

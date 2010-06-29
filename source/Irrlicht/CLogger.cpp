@@ -37,7 +37,12 @@ namespace irr
 		{
 			SEvent event;
 			event.EventType = EET_LOG_TEXT_EVENT;
+#if defined(_IRR_IMPROVE_UNICODE) // >> IrrlichtML modification 2010.06.28
+			core::stringw s = text;
+			event.LogEvent.Text = s.c_str();
+#else
 			event.LogEvent.Text = text;
+#endif // <<
 			event.LogEvent.Level = ll;
 			if (Receiver->OnEvent(event))
 				return;
@@ -64,23 +69,44 @@ namespace irr
 	{
 		if (ll < LogLevel)
 			return;
+// >> IrrlichtML modification 2010.06.28
+#if defined(_IRR_IMPROVE_UNICODE)
+		if (Receiver)
+		{
+			SEvent event;
+			event.EventType = EET_LOG_TEXT_EVENT;
+			event.LogEvent.Text = text;
+			event.LogEvent.Level = ll;
+			if (Receiver->OnEvent(event))
+				return;
+		}
 
+		os::Printer::print(text);
+#else
 		core::stringc s = text;
 		log(s.c_str(), ll);
+#endif
 	}
-
+// <<
 
 	//! Prints out a text into the log
 	void CLogger::log(const wchar_t* text, const wchar_t* hint, ELOG_LEVEL ll)
 	{
 		if (ll < LogLevel)
 			return;
-
+// >> IrrlichtML modification 2010.06.28
+#if defined(_IRR_IMPROVE_UNICODE)
+		core::stringw s = text;
+		s += L": ";
+		s += hint;
+		log (s.c_str(), ll);
+#else
 		core::stringc s1 = text;
 		core::stringc s2 = hint;
 		log(s1.c_str(), s2.c_str(), ll);
+#endif
 	}
-
+// <<
 	//! Prints out a text into the log
 	void CLogger::log(const c8* text, const wchar_t* hint, ELOG_LEVEL ll)
 	{

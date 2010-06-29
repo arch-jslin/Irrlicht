@@ -13,9 +13,6 @@
 #include "irrArray.h"
 #include "IFileSystem.h"
 #include "IOSOperator.h"
-// >> add by zgock for Multilingual start
-#include "CGUITTFont.h"
-// << add by zgock for Multilingual end
 
 namespace irr
 {
@@ -79,13 +76,12 @@ public:
 
 	//! returns the font
 	virtual IGUIFont* getFont(const io::path& filename);
-
-// >> add by zgock for Multilingual start
-// >> modified by arch_jslin 2010.06.25 changed type from c8* to io::path
+// >> IrrlichtML modification 2010.06.28 (modified again by arch_jslin)
+#if defined(_IRR_COMPILE_WITH_CGUITTFONT_)
 	//! returns the font
-	virtual IGUITTFont* getFont(const io::path& name, u32 fontsize);
-// << add by zgock for Multilingual end
-
+	virtual IGUITTFont* getFont(const io::path& name, u32 fontsize, bool antialias, bool transparency);
+#endif
+// <<
 	//! add an externally loaded font
 	virtual IGUIFont* addFont(const io::path& name, IGUIFont* font);
 
@@ -275,37 +271,24 @@ private:
 			return (NamedPath < other.NamedPath);
 		}
 	};
-
-// >> add by zgock for Multilingual start
-// >> modified by arch_jslin 2010.06.25 changed property type from stringc to SNamedPath
-	struct STTFace
-	{
-		io::SNamedPath NamedPath;
-		CGUITTFace* Face;
-
-		bool operator < (const STTFace& other) const
-		{
-			return (NamedPath < other.NamedPath);
-		}
-	};
-
+// >> IrrlichtML modification 2010.06.29 (modified again by arch_jslin)
+#if defined(_IRR_COMPILE_WITH_CGUITTFONT_)
 	struct STTFont
 	{
 		io::SNamedPath NamedPath;
 		u32 size;
-		CGUITTFont* Font;
+		IGUITTFont* Font;
 
 		bool operator < (const STTFont& other) const
 		{
-			if (NamedPath.getInternalName() != other.NamedPath.getInternalName()){
+			if (NamedPath.getPath() != other.NamedPath.getPath())
 				return (NamedPath < other.NamedPath);
-			} else {
+			else
 				return (size < other.size);
-			}
 		}
 	};
-// << add by zgock for Multilingual end
-
+#endif
+// <<
 	struct SSpriteBank
 	{
 		io::SNamedPath NamedPath;
@@ -331,10 +314,9 @@ private:
 	core::array<IGUIElementFactory*> GUIElementFactoryList;
 
 	core::array<SFont> Fonts;
-// >> add by zgock for Multilingual start
-	core::array<STTFace> Faces;
+#if defined(_IRR_COMPILE_WITH_CGUITTFONT_) // >> IrrlichtML modification 2010.06.29
 	core::array<STTFont> TTFonts;
-// << add by zgock for Multilingual end
+#endif // <<
 	core::array<SSpriteBank> Banks;
 	video::IVideoDriver* Driver;
 	IGUIElement* Hovered;

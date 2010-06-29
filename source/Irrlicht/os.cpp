@@ -2,6 +2,8 @@
 // This file is part of the "Irrlicht Engine".
 // For conditions of distribution and use, see copyright notice in irrlicht.h
 
+#include <locale.h>
+
 #include "os.h"
 #include "irrString.h"
 #include "IrrCompileConfig.h"
@@ -74,7 +76,19 @@ namespace os
 		printf("%s\n", message);
 #endif
 	}
-
+// >> IrrlichtML modification 2010.06.28
+#if defined(_IRR_IMPROVE_UNICODE)
+	//! prints a debuginfo string
+	void Printer::print(const wchar_t* message)
+	{
+		OutputDebugStringW(message);
+		OutputDebugStringW(L"\n");
+		//wprintf cannot display unicode string on console. need converting from widechar to multibyte. so set locale...hmm
+		_wsetlocale(LC_CTYPE, L"");
+		wprintf(L"%ws\n", message);
+	}
+#endif
+// <<
 	static LARGE_INTEGER HighPerformanceFreq;
 	static BOOL HighPerformanceTimerSupport = FALSE;
 	static BOOL MultiCore = FALSE;
@@ -186,7 +200,21 @@ namespace os
 		if (Logger)
 			Logger->log(message, hint.c_str(), ll);
 	}
+// >> IrrlichtML modification 2010.06.28
+#if defined(_IRR_IMPROVE_UNICODE)
+	void Printer::log(const wchar_t* message, const wchar_t* hint, ELOG_LEVEL ll)
+	{
+		if (Logger)
+			Logger->log(message, hint, ll);
+	}
 
+	void Printer::log(const wchar_t* message, const io::path& hint, ELOG_LEVEL ll)
+	{
+		if (Logger)
+			Logger->log(message, hint.c_str(), ll);
+	}
+#endif
+// <<
 	// our Randomizer is not really os specific, so we
 	// code one for all, which should work on every platform the same,
 	// which is desireable.

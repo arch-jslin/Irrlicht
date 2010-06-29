@@ -16,15 +16,12 @@
 #include "COSOperator.h"
 #include "dimension2d.h"
 #include <winuser.h>
-
-// >> add by zgock for Multilingual start
-#include "irrlicht.h"
-#include <stdlib.h>
-#include <locale.h>
+// >> IrrlichtML modification 2010.06.28
+#if defined(_IRR_USE_INPUT_METHOD)
 #include <imm.h>
 //#pragma comment(lib, "imm32.lib")
-// << add by zgock for Multilingual end
-
+#endif
+// <<
 namespace irr
 {
 	namespace video
@@ -242,6 +239,30 @@ irr::CIrrDeviceWin32* getDeviceFromHWnd(HWND hWnd)
 	return 0;
 }
 
+// >> IrrlichtML modification 2010.06.28
+#if defined(_IRR_USE_INPUT_METHOD)
+namespace irr
+{
+	void updateICPos(void* hWnd, s32 x, s32 y, s32 height)
+	{
+		COMPOSITIONFORM cf;
+		HWND hwnd = (HWND)hWnd;
+		HIMC hIMC = ImmGetContext(hwnd);
+
+		if(hIMC)
+		{
+			cf.dwStyle = CFS_POINT;
+			cf.ptCurrentPos.x = x;
+			cf.ptCurrentPos.y = y - height;
+
+			ImmSetCompositionWindow(hIMC, &cf);
+
+			ImmReleaseContext(hwnd, hIMC);
+		}
+	}
+} // end of namespace irr
+#endif
+// <<
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -251,10 +272,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	#ifndef WHEEL_DELTA
 	#define WHEEL_DELTA 120
 	#endif
-
-// >> add by uirou for IME Window start
-	static int mouse_capture = 0;
-// << add by uirou for IME Window end
 
 	irr::CIrrDeviceWin32* dev = 0;
 	irr::SEvent event;
@@ -357,22 +374,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				}
 			}
 		}
+// >> IrrlichtML modification 2010.06.28
+#if defined(_IRR_USE_INPUT_METHOD)
+		if(m->irrMessage == irr::EMIE_LMOUSE_PRESSED_DOWN || m->irrMessage == irr::EMIE_LMOUSE_LEFT_UP)
+		{
+			event.EventType = irr::EET_IMPUT_METHOD_EVENT;
+			event.InputMethodEvent.Event = irr::EIME_CHANGE_POS;
+			event.InputMethodEvent.Handle = hWnd;
 
-// >> modified by arch_jslin 2009.03.26
-// >> add by uirou for IME Window start
-        if( m->group == 0 ) {         // down
-            mouse_capture++;
-            SetCapture(hWnd);
-        }
-// << add by uirou for IME Window end
-// >> add by uirou for IME Window start
-        else if( m->group == 1 ) {    // up
-            if(--mouse_capture <= 0){
-                mouse_capture = 0;
-                ReleaseCapture();
-            }
-        }
-// << add by uirou for IME Window end
+			if (dev)
+				dev->postEventFromUser(event);
+		}
+#endif // <<
 		return 0;
 	}
 
@@ -388,7 +401,23 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 	case WM_ERASEBKGND:
 		return 0;
+// >> IrrlichtML modification 2010.06.28
+#if defined(_IRR_USE_INPUT_METHOD)
+	case WM_IME_CHAR:
+		{
+			event.EventType = irr::EET_IMPUT_METHOD_EVENT;
+			event.InputMethodEvent.Event = irr::EIME_CHAR_INPUT;
+			event.InputMethodEvent.Handle = hWnd;
+			event.InputMethodEvent.Char = (wchar_t)wParam;
 
+			dev = getDeviceFromHWnd(hWnd);
+			if (dev)
+				dev->postEventFromUser(event);
+
+			return	0;
+		}
+#endif
+// <<
 	case WM_SYSKEYDOWN:
 	case WM_SYSKEYUP:
 	case WM_KEYDOWN:
@@ -452,7 +481,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			dev = getDeviceFromHWnd(hWnd);
 			if (dev)
 				dev->postEventFromUser(event);
+// >> IrrlichtML modification 2010.06.28
+#if defined(_IRR_USE_INPUT_METHOD)
+			event.EventType = irr::EET_IMPUT_METHOD_EVENT;
+			event.InputMethodEvent.Event = irr::EIME_CHANGE_POS;
+			event.InputMethodEvent.Handle = hWnd;
 
+			if (dev)
+				dev->postEventFromUser(event);
+#endif
+// <<
 			if (message == WM_SYSKEYDOWN || message == WM_SYSKEYUP)
 				return DefWindowProc(hWnd, message, wParam, lParam);
 			else
@@ -489,6 +527,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			else
 				dev->switchToFullScreen();
 		}
+#if defined(_IRR_USE_INPUT_METHOD) // >> IrrlichtML modification 2010.06.28
+			event.EventType = irr::EET_IMPUT_METHOD_EVENT;
+			event.InputMethodEvent.Event = irr::EIME_CHANGE_POS;
+			event.InputMethodEvent.Handle = hWnd;
+
+			if (dev)
+				dev->postEventFromUser(event);
+#endif // <<
 		break;
 
 	case WM_USER:
@@ -508,40 +554,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		if (dev)
 			dev->getCursorControl()->setVisible( dev->getCursorControl()->isVisible() );
 		break;
-
-// >> add by zgock for Multilingual start
-	case WM_IME_CHAR:
-		{
-			char* old_locale = setlocale(LC_ALL, NULL);
-
-			setlocale(LC_ALL,"");		// Use defalut locale
-			event.EventType = irr::EET_KEY_INPUT_EVENT;
-			event.KeyInput.PressedDown = true;
-			dev = getDeviceFromHWnd(hWnd);
-			unsigned char mbc[3];
-			wchar_t wc[2];
-// >> modified by uirou for Multilingual start
-			if(wParam > 255){
-				mbc[0] = wParam >> 8;
-				mbc[1] = wParam & 0xff;
-				mbc[2] = 0;
-			}else{
-				mbc[0] = wParam;
-				mbc[1] = mbc[2] = 0;
-			}
-// << modified by uirou for Multilingual end
-			int x = mbstowcs(wc, (char *)&mbc, MB_CUR_MAX );
-			event.KeyInput.Char = wc[0]; //KeyAsc >= 0 ? KeyAsc : 0;
-			event.KeyInput.Key = irr::KEY_ACCEPT;
-			event.KeyInput.Shift = 0;
-			event.KeyInput.Control = 0;
-			if (dev)	dev->postEventFromUser(event);
-
-			setlocale(LC_ALL, old_locale);
-
-			return	0;
-		}
-// << add by zgock for Multilingual end
 
 	case WM_INPUTLANGCHANGE:
         // get the new codepage used for keyboard input
@@ -681,10 +693,6 @@ CIrrDeviceWin32::CIrrDeviceWin32(const SIrrlichtCreationParameters& params)
 	em.hWnd = HWnd;
 	EnvMap.push_back(em);
 
-// >> add by uirou for IME Window start
-	GUIEnvironment->setDevice(this);
-// << add by uirou for IME Window end
-
 	// set this as active window
 	SetActiveWindow(HWnd);
 	SetForegroundWindow(HWnd);
@@ -692,6 +700,11 @@ CIrrDeviceWin32::CIrrDeviceWin32(const SIrrlichtCreationParameters& params)
 	// get the codepage used for keyboard input
     KEYBOARD_INPUT_HKL = GetKeyboardLayout(0);
     KEYBOARD_INPUT_CODEPAGE = LocaleIdToCodepage( LOWORD(KEYBOARD_INPUT_HKL) );
+// >> IrrlichtML modification 2010.06.28
+#if defined(_IRR_USE_INPUT_METHOD)
+	// for reset the position of composition window
+	updateICPos(HWnd, 0, 0, 0);
+#endif // <<
 }
 
 
@@ -815,7 +828,16 @@ bool CIrrDeviceWin32::run()
 	{
 		// No message translation because we don't use WM_CHAR and it would conflict with our
 		// deadkey handling.
-
+// >> IrrlichtML modification 2010.06.28
+#if defined (_IRR_USE_INPUT_METHOD)
+		// Note: IME-aware issue
+		//       If you want to catch WM_IME message, translate it. This function seems part of IME. Is there other way?
+		//       Maybe, if you look after all IME functions, this might be unnecessary.
+		//       Check this - http://irrlicht.sourceforge.net/phpBB2/viewtopic.php?t=36095
+		// 2010.03.27 Madhyde
+		TranslateMessage(&msg);
+#endif
+// <<
 		if (ExternalWindow && msg.hwnd == HWnd)
 			WndProc(HWnd, msg.message, msg.wParam, msg.lParam);
 		else
@@ -1598,21 +1620,6 @@ void CIrrDeviceWin32::ReportLastWinApiError()
 		}
 	}
 }
-
-// >> add by uirou for IME Window start
-void CIrrDeviceWin32::updateICSpot(short x, short y, short height){
-    HIMC hIMC = ImmGetContext(HWnd);
-    //LOGFONT lf;
-    COMPOSITIONFORM cf;
-
-    cf.dwStyle = CFS_POINT;
-    cf.ptCurrentPos.x = x;
-    cf.ptCurrentPos.y = y - height;
-    ImmSetCompositionWindow(hIMC, &cf);
-
-    ImmReleaseContext(HWnd, hIMC);
-}
-// << add by uirou for IME Window end
 
 } // end namespace
 
