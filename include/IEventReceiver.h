@@ -414,7 +414,11 @@ struct SEvent
 	struct SLogEvent
 	{
 		//! Pointer to text which has been logged
+#if defined(_IRR_IMPROVE_UNICODE_) // >> IrrlichtML modifications 2010.06.29
+		const wchar_t* Text;
+#else
 		const c8* Text;
+#endif // <<
 
 		//! Log level in which the text has been logged
 		ELOG_LEVEL Level;
