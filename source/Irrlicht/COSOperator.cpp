@@ -52,7 +52,7 @@ const wchar_t* COSOperator::getOperationSystemVersion() const
 
 // >> IrrlichtML modification 2010.06.28
 //! copies text to the clipboard
-#if defined(_IRR_IMPROVE_UNICODE)
+#if defined(_IRR_IMPROVE_UNICODE_)
 void COSOperator::copyToClipboard(const wchar_t* text) const
 {
 	if (wcslen(text)==0)
@@ -83,7 +83,7 @@ void COSOperator::copyToClipboard(const wchar_t* text) const
 #endif
 }
 
-#else //_IRR_IMPROVE_UNICODE
+#else //_IRR_IMPROVE_UNICODE_
 void COSOperator::copyToClipboard(const c8* text) const
 {
 	if (strlen(text)==0)
@@ -121,12 +121,12 @@ void COSOperator::copyToClipboard(const c8* text) const
 
 #endif
 }
-#endif //_IRR_IMPROVE_UNICODE
+#endif //_IRR_IMPROVE_UNICODE_
 
 
 //! gets text from the clipboard
 //! \return Returns 0 if no string is in there.
-#if defined(_IRR_IMPROVE_UNICODE)
+#if defined(_IRR_IMPROVE_UNICODE_)
 const wchar_t* COSOperator::getTextFromClipboard() const
 {
 #if defined(_IRR_XBOX_PLATFORM_)
@@ -149,7 +149,7 @@ const wchar_t* COSOperator::getTextFromClipboard() const
 #endif
 }
 
-#else //_IRR_IMPROVE_UNICODE
+#else //_IRR_IMPROVE_UNICODE_
 const c8* COSOperator::getTextFromClipboard() const
 {
 #if defined(_IRR_XBOX_PLATFORM_)
@@ -179,7 +179,7 @@ const c8* COSOperator::getTextFromClipboard() const
 	return 0;
 #endif
 }
-#endif //_IRR_IMPROVE_UNICODE
+#endif //_IRR_IMPROVE_UNICODE_
 // << end of IrrlichtML modification
 
 bool COSOperator::getProcessorSpeedMHz(u32* MHz) const

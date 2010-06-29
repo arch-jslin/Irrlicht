@@ -37,7 +37,7 @@ namespace irr
 		{
 			SEvent event;
 			event.EventType = EET_LOG_TEXT_EVENT;
-#if defined(_IRR_IMPROVE_UNICODE) // >> IrrlichtML modification 2010.06.28
+#if defined(_IRR_IMPROVE_UNICODE_) // >> IrrlichtML modification 2010.06.28
 			core::stringw s = text;
 			event.LogEvent.Text = s.c_str();
 #else
@@ -70,7 +70,7 @@ namespace irr
 		if (ll < LogLevel)
 			return;
 // >> IrrlichtML modification 2010.06.28
-#if defined(_IRR_IMPROVE_UNICODE)
+#if defined(_IRR_IMPROVE_UNICODE_)
 		if (Receiver)
 		{
 			SEvent event;
@@ -95,7 +95,7 @@ namespace irr
 		if (ll < LogLevel)
 			return;
 // >> IrrlichtML modification 2010.06.28
-#if defined(_IRR_IMPROVE_UNICODE)
+#if defined(_IRR_IMPROVE_UNICODE_)
 		core::stringw s = text;
 		s += L": ";
 		s += hint;

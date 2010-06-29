@@ -29,7 +29,7 @@ public:
 	virtual const wchar_t* getOperationSystemVersion() const;
 // >> IrrlichtML modification 2010.06.28
 	//! copies text to the clipboard
-#if defined(_IRR_IMPROVE_UNICODE)
+#if defined(_IRR_IMPROVE_UNICODE_)
 	virtual void copyToClipboard(const wchar_t* text) const;
 #else
 	virtual void copyToClipboard(const c8* text) const;
@@ -37,7 +37,7 @@ public:
 
 	//! gets text from the clipboard
 	//! \return Returns 0 if no string is in there.
-#if defined(_IRR_IMPROVE_UNICODE)
+#if defined(_IRR_IMPROVE_UNICODE_)
 	virtual const wchar_t* getTextFromClipboard() const;
 #else
 	virtual const c8* getTextFromClipboard() const;

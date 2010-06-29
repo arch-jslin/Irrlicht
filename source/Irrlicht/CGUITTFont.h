@@ -11,11 +11,14 @@ namespace irr
 {
 namespace gui
 {
+    //forward added by arch_jslin 2010.06.29
+    struct SGUITTFace;
 	//! Structure representing a single TrueType glyph.
 	struct SGUITTGlyph
 	{
 		//! Loads the glyph.
-		void load(u32 character, FT_Face face, video::IVideoDriver* driver, u32 size, bool size_is_pixels, bool fontHinting, bool autoHinting, bool useMonochrome);
+		void load(u32 character, FT_Face face, video::IVideoDriver* driver, u32 size,
+                  bool size_is_pixels, bool fontHinting, bool autoHinting, bool useMonochrome);
 
 		//! Unloads the glyph.
 		void unload(video::IVideoDriver* driver);
@@ -25,7 +28,8 @@ namespace gui
 
 		//! The image data.
 		//! Only used when rendering grayscale font images using the EDT_SOFTWARE driver.
-		//! EDT_SOFTWARE forces A1R5G5B5 textures.  We store the IImage so we can calculate the correct alpha color.
+		//! EDT_SOFTWARE forces A1R5G5B5 textures.  We store the IImage so we can calculate
+		//! the correct alpha color.
 		video::IImage* image;
 
 		// Texture/image data.
@@ -45,35 +49,56 @@ namespace gui
 class CGUITTFont : public IGUITTFont
 {
 public:
-    //! Creates a new TrueType font and returns a pointer to it.  The pointer must be drop()'ed when finished.
+    //! Creates a new TrueType font and returns a pointer to it.
+    //! The pointer must be drop()'ed when finished.
     //! \param env The IGUIEnvironment the font loads out of.
     //! \param filename The filename of the font.
     //! \param size The size of the font.
     //! \param size_in_pixel If true, size is represented as pixels instead of points.
     //! \return Returns a pointer to a CGUITTFont.  Will return 0 if the font failed to load.
-    static CGUITTFont* create(IGUIEnvironment *env, const io::path& filename, const u32 size, const bool size_in_pixel = false);
+    static CGUITTFont* create(IGUIEnvironment *env, const io::path& filename, const u32 size,
+                              const bool size_in_pixel = false);
 
     //! Destructor
     virtual ~CGUITTFont();
 
+    //! Get the font size (default unit is point).
+    virtual u32 getFontSize() const { return size; }
+
+    //! Check the unit of size (in pixel or in point).
+    virtual bool isSizeInPixel() const { return size_in_pixel; }
+
+    //! Check the font's transparency.
+    virtual bool isTransparent() const { return use_transparency; }
+
+    //! Check if the font auto-hinting is enabled.
+    virtual bool useAutoHinting() const { return use_auto_hinting; }
+
+    //NOTE: I don't know what's the difference between auto-hinting / hinting.
+    //! Check if the font hinting is enabled.
+    virtual bool useHinting()     const { return use_hinting; }
+
+    //! Check if the font is monochrome.
+    //! This is opposed to the "anti-alias" concept.
+    virtual bool useMonochrome()  const { return use_monochrome; }
+
     //! Tells the font to allow transparency when rendering.
     //! Default: true.
     //! \param flag If true, the font draws using transparency.
-    void setTransparency(const bool flag)
-    {
-        use_transparency = flag;
-    }
+    virtual void setTransparency(const bool flag) { use_transparency = flag; }
 
     //! Tells the font to use monochrome rendering.
     //! Default: false.
-    //! \param flag If true, the font draws using a monochrome image.  If false, the font uses a grayscale image.
-    void setMonochrome(const bool flag);
+    //! \param flag If true, the font draws using a monochrome image.
+    //!        If false, the font uses a grayscale image.
+    virtual void setMonochrome(const bool flag);
 
     //! Enables or disables font hinting.
     //! Default: Hinting and auto-hinting true.
-    //! \param enable If false, font hinting is turned off.  If true, font hinting is turned on.
-    //! \param enable_auto_hinting If true, FreeType uses its own auto-hinting algorithm.  If false, it tries to use the algorithm specified by the font.
-    void setFontHinting(const bool enable, const bool enable_auto_hinting = true);
+    //! \param enable If false, font hinting is turned off. If true, font hinting is turned on.
+    //! \param enable_auto_hinting If true, FreeType uses its own auto-hinting algorithm.
+    //!        If false, it tries to use the algorithm specified by the font.
+    virtual void setFontHinting(const bool enable, const bool enable_auto_hinting = true);
 
     //! Draws some text and clips it to the specified rectangle if wanted.
     virtual void draw(const core::stringw& text, const core::rect<s32>& position,
@@ -149,5 +174,7 @@ private:
 } // end namespace gui
 } // end namespace irr
 
-#endif
+#endif //if _IRR_COMPILE_WITH_CGUITTFONT_
+
+#endif // __C_GUI_TTFONT_H_INCLUDED__
 

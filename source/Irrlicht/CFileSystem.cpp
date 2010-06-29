@@ -428,7 +428,7 @@ bool CFileSystem::changeWorkingDirectoryTo(const io::path& newDirectory)
 
 #if defined(_IRR_WINDOWS_CE_PLATFORM_)
 		success = true;
-#elif defined(_MSC_VER)
+#elif defined(_IRR_COMPILE_WITH_WINDOWS_DEVICE_) //WHY THE HELL THIS WAS _MSC_VER ??? arch_jslin 2010.06.29
 	#if defined(_IRR_WCHAR_FILESYSTEM)
 		success=(_wchdir(newDirectory.c_str()) == 0);
 	#else
@@ -763,15 +763,15 @@ bool CFileSystem::existFile(const io::path& filename) const
 	}
 #else
 	_IRR_IMPLEMENT_MANAGED_MARSHALLING_BUGFIX;
-#if defined(_MSC_VER)
+#if defined(_IRR_COMPILE_WITH_WINDOWS_DEVICE_) //WHY THE HELL THIS WAS _MSC_VER ??? arch_jslin 2010.06.29
 #if defined(_IRR_WCHAR_FILESYSTEM)
 	return (_waccess(filename.c_str(), 0) != -1);
 #else
 	return (_access(filename.c_str(), 0) != -1);
-#endif
+#endif //_IRR_WCHAR_FILESYSTEM
 #else
 	return (access(filename.c_str(), F_OK) != -1);
-#endif
+#endif //_IRR_WINDOWS_
 #endif
 }
 

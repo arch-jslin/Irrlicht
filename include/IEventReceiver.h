@@ -50,7 +50,7 @@ namespace irr
 		user receiver then no text will be sent to the console. */
 		EET_LOG_TEXT_EVENT,
 // >> IrrlichtML modification 2010.06.29
-#if defined(_IRR_USE_INPUT_METHOD)
+#if defined(_IRR_USE_INPUT_METHOD_)
 		//! A input method event
 		/** Input method events are created by the input method message and passed to IrrlichtDevice::postEventFromUser.
 		Windows: Implemented.
@@ -151,7 +151,7 @@ namespace irr
 		EMBSM_FORCE_32_BIT = 0x7fffffff
 	};
 // >> IrrlichtML modification 2010.06.29
-#if defined(_IRR_USE_INPUT_METHOD)
+#if defined(_IRR_USE_INPUT_METHOD_)
 	//! Enumeration for all input method events
 	enum EINPUT_METHOD_EVENT
 	{
@@ -430,7 +430,7 @@ struct SEvent
 		s32 UserData2;
 	};
 // >> IrrlichtML modification 2010.06.29
-#if defined(_IRR_USE_INPUT_METHOD)
+#if defined(_IRR_USE_INPUT_METHOD_)
 	struct SInputMethodEvent
 	{
 		//! Parent window handle for IMM functions (Windows only)
@@ -453,7 +453,7 @@ struct SEvent
 		struct SJoystickEvent JoystickEvent;
 		struct SLogEvent LogEvent;
 		struct SUserEvent UserEvent;
-#if defined(_IRR_USE_INPUT_METHOD) // >> IrrlichtML modification 2010.06.29
+#if defined(_IRR_USE_INPUT_METHOD_) // >> IrrlichtML modification 2010.06.29
 		struct SInputMethodEvent InputMethodEvent;
 #endif // <<
 	};

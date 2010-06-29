@@ -17,7 +17,7 @@
 #include "dimension2d.h"
 #include <winuser.h>
 // >> IrrlichtML modification 2010.06.28
-#if defined(_IRR_USE_INPUT_METHOD)
+#if defined(_IRR_USE_INPUT_METHOD_)
 #include <imm.h>
 //#pragma comment(lib, "imm32.lib")
 #endif
@@ -240,7 +240,7 @@ irr::CIrrDeviceWin32* getDeviceFromHWnd(HWND hWnd)
 }
 
 // >> IrrlichtML modification 2010.06.28
-#if defined(_IRR_USE_INPUT_METHOD)
+#if defined(_IRR_USE_INPUT_METHOD_)
 namespace irr
 {
 	void updateICPos(void* hWnd, s32 x, s32 y, s32 height)
@@ -375,7 +375,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			}
 		}
 // >> IrrlichtML modification 2010.06.28
-#if defined(_IRR_USE_INPUT_METHOD)
+#if defined(_IRR_USE_INPUT_METHOD_)
 		if(m->irrMessage == irr::EMIE_LMOUSE_PRESSED_DOWN || m->irrMessage == irr::EMIE_LMOUSE_LEFT_UP)
 		{
 			event.EventType = irr::EET_IMPUT_METHOD_EVENT;
@@ -402,7 +402,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_ERASEBKGND:
 		return 0;
 // >> IrrlichtML modification 2010.06.28
-#if defined(_IRR_USE_INPUT_METHOD)
+#if defined(_IRR_USE_INPUT_METHOD_)
 	case WM_IME_CHAR:
 		{
 			event.EventType = irr::EET_IMPUT_METHOD_EVENT;
@@ -482,7 +482,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			if (dev)
 				dev->postEventFromUser(event);
 // >> IrrlichtML modification 2010.06.28
-#if defined(_IRR_USE_INPUT_METHOD)
+#if defined(_IRR_USE_INPUT_METHOD_)
 			event.EventType = irr::EET_IMPUT_METHOD_EVENT;
 			event.InputMethodEvent.Event = irr::EIME_CHANGE_POS;
 			event.InputMethodEvent.Handle = hWnd;
@@ -527,7 +527,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			else
 				dev->switchToFullScreen();
 		}
-#if defined(_IRR_USE_INPUT_METHOD) // >> IrrlichtML modification 2010.06.28
+#if defined(_IRR_USE_INPUT_METHOD_) // >> IrrlichtML modification 2010.06.28
 			event.EventType = irr::EET_IMPUT_METHOD_EVENT;
 			event.InputMethodEvent.Event = irr::EIME_CHANGE_POS;
 			event.InputMethodEvent.Handle = hWnd;
@@ -701,7 +701,7 @@ CIrrDeviceWin32::CIrrDeviceWin32(const SIrrlichtCreationParameters& params)
     KEYBOARD_INPUT_HKL = GetKeyboardLayout(0);
     KEYBOARD_INPUT_CODEPAGE = LocaleIdToCodepage( LOWORD(KEYBOARD_INPUT_HKL) );
 // >> IrrlichtML modification 2010.06.28
-#if defined(_IRR_USE_INPUT_METHOD)
+#if defined(_IRR_USE_INPUT_METHOD_)
 	// for reset the position of composition window
 	updateICPos(HWnd, 0, 0, 0);
 #endif // <<
@@ -829,7 +829,7 @@ bool CIrrDeviceWin32::run()
 		// No message translation because we don't use WM_CHAR and it would conflict with our
 		// deadkey handling.
 // >> IrrlichtML modification 2010.06.28
-#if defined (_IRR_USE_INPUT_METHOD)
+#if defined (_IRR_USE_INPUT_METHOD_)
 		// Note: IME-aware issue
 		//       If you want to catch WM_IME message, translate it. This function seems part of IME. Is there other way?
 		//       Maybe, if you look after all IME functions, this might be unnecessary.

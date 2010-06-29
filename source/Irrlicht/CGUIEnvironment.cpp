@@ -602,7 +602,7 @@ bool CGUIEnvironment::postEventFromUser(const SEvent& event)
 			}
 		}
 		break;
-#if defined(_IRR_USE_INPUT_METHOD) // >> IrrlichtML modification 2010.06.29
+#if defined(_IRR_USE_INPUT_METHOD_) // >> IrrlichtML modification 2010.06.29
 	case EET_IMPUT_METHOD_EVENT:
 		{
 			// todo : if CGUIEdit has not focus, close input method. Use WM_NOTIFY message.
@@ -1270,10 +1270,6 @@ IGUIEditBox* CGUIEnvironment::addEditBox(const wchar_t* text,
 {
 	IGUIEditBox* d = new CGUIEditBox(text, border, this,
 			parent ? parent : this, id, rectangle);
-
-// >> add by uirou for IME Window start
-	d->setDevice(dev);
-// << add by uirou for IME Window end
 
 	d->drop();
 	return d;

@@ -77,7 +77,7 @@ namespace os
 #endif
 	}
 // >> IrrlichtML modification 2010.06.28
-#if defined(_IRR_IMPROVE_UNICODE)
+#if defined(_IRR_IMPROVE_UNICODE_)
 	//! prints a debuginfo string
 	void Printer::print(const wchar_t* message)
 	{
@@ -201,7 +201,7 @@ namespace os
 			Logger->log(message, hint.c_str(), ll);
 	}
 // >> IrrlichtML modification 2010.06.28
-#if defined(_IRR_IMPROVE_UNICODE)
+#if defined(_IRR_IMPROVE_UNICODE_)
 	void Printer::log(const wchar_t* message, const wchar_t* hint, ELOG_LEVEL ll)
 	{
 		if (Logger)

@@ -24,14 +24,14 @@
 
 namespace irr
 { // >> IrrlichtML modification 2010.06.29
-#if defined(_IRR_USE_INPUT_METHOD)
+#if defined(_IRR_USE_INPUT_METHOD_)
 	void updateICPos(void* hWnd, s32 x, s32 y, s32 height);
 #endif
 namespace gui
 {
 
 #ifndef __IRR_USTRING_H_INCLUDED__
-	#if defined(_IRR_IMPROVE_UNICODE)
+	#if defined(_IRR_IMPROVE_UNICODE_)
 		//from Nalin's irrUString.h
 		#define UTF16_IS_SURROGATE_LO(c)	(((c) & 0xFC00) == 0xDC00)
 		#define UTF16_IS_SURROGATE_HI(c)	(((c) & 0xFC00) == 0xD800)
@@ -222,7 +222,7 @@ bool CGUIEditBox::OnEvent(const SEvent& event)
 				}
 			}
 			break;
-#if defined(_IRR_USE_INPUT_METHOD) // >> IrrlichtML modification 2010.06.29
+#if defined(_IRR_USE_INPUT_METHOD_) // >> IrrlichtML modification 2010.06.29
 		case EET_IMPUT_METHOD_EVENT:
 			if (processIMEEvent(event))
 				return true;
@@ -279,7 +279,7 @@ bool CGUIEditBox::processKey(const SEvent& event)
 				const s32 realmbgn = MarkBegin < MarkEnd ? MarkBegin : MarkEnd;
 				const s32 realmend = MarkBegin < MarkEnd ? MarkEnd : MarkBegin;
 // >> IrrlichtML modification 2010.06.29
-#if defined(_IRR_IMPROVE_UNICODE)
+#if defined(_IRR_IMPROVE_UNICODE_)
 				core::stringw s;
 				s = Text.subString(realmbgn, realmend - realmbgn);
 #else
@@ -297,7 +297,7 @@ bool CGUIEditBox::processKey(const SEvent& event)
 				const s32 realmend = MarkBegin < MarkEnd ? MarkEnd : MarkBegin;
 
 				// copy
-#if defined(_IRR_IMPROVE_UNICODE) // >> IrrlichtML modification 2010.06.29
+#if defined(_IRR_IMPROVE_UNICODE_) // >> IrrlichtML modification 2010.06.29
 				core::stringw sc;
 				sc = Text.subString(realmbgn, realmend - realmbgn);
 #else
@@ -332,7 +332,7 @@ bool CGUIEditBox::processKey(const SEvent& event)
 				const s32 realmend = MarkBegin < MarkEnd ? MarkEnd : MarkBegin;
 
 				// add new character
-#if defined(_IRR_IMPROVE_UNICODE) // >> IrrlichtML modification 2010.06.29
+#if defined(_IRR_IMPROVE_UNICODE_) // >> IrrlichtML modification 2010.06.29
 				const wchar_t* p = Operator->getTextFromClipboard();
 #else
 				const c8* p = Operator->getTextFromClipboard();
@@ -706,7 +706,7 @@ bool CGUIEditBox::processKey(const SEvent& event)
 
 	calculateScrollPos();
 // >> IrrlichtML modification 2010.06.29
-#if defined(_IRR_IMPROVE_UNICODE)
+#if defined(_IRR_IMPROVE_UNICODE_)
 	switch(event.KeyInput.Key)
 	{
 		// If cursor points the surrogate low, send KEY_LEFT event.
@@ -745,7 +745,7 @@ bool CGUIEditBox::processKey(const SEvent& event)
 }
 
 // >> IrrlichtML modification 2010.06.29
-#if defined(_IRR_USE_INPUT_METHOD)
+#if defined(_IRR_USE_INPUT_METHOD_)
 bool CGUIEditBox::processIMEEvent(const SEvent& event)
 {
 	switch(event.InputMethodEvent.Event)
@@ -1070,7 +1070,7 @@ bool CGUIEditBox::processMouse(const SEvent& event)
 		if (Environment->hasFocus(this))
 		{
 			CursorPos = getCursorPos(event.MouseInput.X, event.MouseInput.Y);
-#if defined(_IRR_IMPROVE_UNICODE) // >> IrrlichtML modification 2010.06.29
+#if defined(_IRR_IMPROVE_UNICODE_) // >> IrrlichtML modification 2010.06.29
 			if(UTF16_IS_SURROGATE_LO(Text[CursorPos]))
 			{
 				if(CursorPos>0)
@@ -1091,7 +1091,7 @@ bool CGUIEditBox::processMouse(const SEvent& event)
 			if (MouseMarking)
 			{
 				CursorPos = getCursorPos(event.MouseInput.X, event.MouseInput.Y);
-#if defined(_IRR_IMPROVE_UNICODE) // >> IrrlichtML modification 2010.06.29
+#if defined(_IRR_IMPROVE_UNICODE_) // >> IrrlichtML modification 2010.06.29
 				if(UTF16_IS_SURROGATE_LO(Text[CursorPos]))
 				{
 					if(CursorPos>0)
@@ -1110,7 +1110,7 @@ bool CGUIEditBox::processMouse(const SEvent& event)
 			BlinkStartTime = os::Timer::getTime();
 			MouseMarking = true;
 			CursorPos = getCursorPos(event.MouseInput.X, event.MouseInput.Y);
-#if defined(_IRR_IMPROVE_UNICODE) // >> IrrlichtML modification 2010.06.29
+#if defined(_IRR_IMPROVE_UNICODE_) // >> IrrlichtML modification 2010.06.29
 			if(UTF16_IS_SURROGATE_LO(Text[CursorPos]))
 			{
 				if(CursorPos>0)
@@ -1132,7 +1132,7 @@ bool CGUIEditBox::processMouse(const SEvent& event)
 			{
 				// move cursor
 				CursorPos = getCursorPos(event.MouseInput.X, event.MouseInput.Y);
-#if defined(_IRR_IMPROVE_UNICODE) // >> IrrlichtML modification 2010.06.29
+#if defined(_IRR_IMPROVE_UNICODE_) // >> IrrlichtML modification 2010.06.29
 				if(UTF16_IS_SURROGATE_LO(Text[CursorPos]))
 				{
 					if(CursorPos>0)

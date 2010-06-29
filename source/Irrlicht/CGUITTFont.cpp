@@ -744,7 +744,7 @@ void CGUITTFont::setInvisibleCharacters(const core::ustring& s)
 
 //added by arch_jslin 2008.11.02
 video::ITexture* CGUITTFont::getTextureFromText(const wchar_t* text, const c8* name)
-{
+{/*
     if( Driver->findTexture(name) ) {    //note: critical fix!!! prevent always writing new texture!!
         return Driver->getTexture(name); //      have to re-write SpriteText wholly in the future.
     }
@@ -799,7 +799,8 @@ video::ITexture* CGUITTFont::getTextureFromText(const wchar_t* text, const c8* n
 
     texture->unlock();
 
-    return texture;
+    return texture; */
+    return 0;
 }
 
 } // end namespace gui
