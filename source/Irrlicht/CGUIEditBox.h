@@ -124,6 +124,11 @@ namespace gui
 
 		bool processKey(const SEvent& event);
 		bool processMouse(const SEvent& event);
+#if defined(_IRR_USE_INPUT_METHOD) // >> IrrlichtML modification 2010.06.29
+		bool processIMEEvent(const SEvent& event);
+		//! calculates the input composition position
+		core::position2di calculateICPos();
+#endif // <<
 		s32 getCursorPos(s32 x, s32 y);
 
 		bool MouseMarking;

@@ -20,14 +20,22 @@ public:
 
 	//! Get the current operation system version as string.
 	virtual const wchar_t* getOperationSystemVersion() const = 0;
-
+// >> IrrlichtML modification 2010.06.29
 	//! Copies text to the clipboard
+#if defined(_IRR_IMPROVE_UNICODE)
+	virtual void copyToClipboard(const wchar_t* text) const = 0;
+#else
 	virtual void copyToClipboard(const c8* text) const = 0;
+#endif
 
 	//! Get text from the clipboard
 	/** \return Returns 0 if no string is in there. */
+#if defined(_IRR_IMPROVE_UNICODE)
+	virtual const wchar_t* getTextFromClipboard() const = 0;
+#else
 	virtual const c8* getTextFromClipboard() const = 0;
-
+#endif
+// <<
 	//! Get the processor speed in megahertz
 	/** \param MHz The integer variable to store the speed in.
 	\return True if successful, false if not */

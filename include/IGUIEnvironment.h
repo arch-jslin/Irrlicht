@@ -15,9 +15,6 @@
 
 namespace irr
 {
-// >> Add by MadHyde for IMEWindow start
-	class IrrlichtDevice;
-// << Add by MadHyde for IME Window end
 	class IOSOperator;
 	class IEventReceiver;
 
@@ -169,7 +166,17 @@ public:
 	This pointer should not be dropped. See IReferenceCounted::drop() for
 	more information. */
 	virtual IGUIFont* getFont(const io::path& filename) = 0;
-
+// >> IrrlichtML modification 2010.06.29
+#if defined(_IRR_COMPILE_WITH_CGUITTFONT_)
+	//! Returns pointer to the font with the specified filename.
+	/** Loads the font if it was not loaded before.
+	\param filename Filename of the Font.
+	\return Pointer to the font. Returns 0 if the font could not be loaded.
+	This pointer should not be dropped. See IReferenceCounted::drop() for
+	more information. */
+	virtual IGUITTFont* getFont(const io::path& filename, u32 fontsize, bool antialias = true, bool transparency = true) { return getFont(filename); };
+#endif
+// <<
 	//! Adds an externally loaded font to the font list.
 	/** This method allows to attach an already loaded font to the list of
 	existing fonts. The font is grabbed if non-null and adding was successful.
@@ -584,30 +591,6 @@ public:
 
 	//! reads an element
 	virtual void readGUIElement(io::IXMLReader* reader, IGUIElement* node) =0;
-
-// >> Add by zgock for Multilingual start
-	//! Returns pointer to the font with the specified file name.
-	/** Loads the font if it was not loaded before. Returns 0 if the font could not be loaded.
-	\return
-	returns a pointer to the font.
-	This pointer should not be dropped. See IReferenceCounted::drop() for more information. */
-	//modified by arch_jslin 2008.11.02
-	virtual IGUITTFont* getFont(const io::path& name, u32 fontsize) =0;
-// << Add by zgock for Multilingual end
-
-// >> Add by uirou for IME Window start
-	virtual void setDevice(void *device) { dev = (irr::IrrlichtDevice*)device; };
-// << Add by uirou for IME Window end
-
-// >> Add by MadHyde for IME Window start
-	//! constructor
-	IGUIEnvironment() : dev(NULL) {};
-
-protected:
-
-	irr::IrrlichtDevice* dev;
-// << Add by MadHyde for IME Window end
-
 };
 
 

@@ -12,7 +12,7 @@
 // This flag will be defined only in SVN, the official release code will have
 // it undefined
 #define IRRLICHT_VERSION_SVN -beta
-#define IRRLICHT_SDK_VERSION "1.7.1-beta"
+#define IRRLICHT_SDK_VERSION "1.7.1-beta (cubeat-modded)"
 
 #include <stdio.h> // TODO: Although included elsewhere this is required at least for mingw
 
@@ -167,6 +167,21 @@ you will not be able to use anything provided by the GUI Environment, including 
 disable this feature, the engine behave as before (ansi). This is currently only supported
 for Windows based systems. */
 //#define _IRR_WCHAR_FILESYSTEM
+
+//! Define _IRR_IMPROVE_UNICODE to enable unicode support for Logger, Clipbord. and care surrogate pair in CGUIEditBox.
+/** Use with define _IRR_WCHAR_FILESYSTEM and UNICODE */
+#define _IRR_IMPROVE_UNICODE
+
+#ifdef _IRR_IMPROVE_UNICODE
+	#define _IRR_WCHAR_FILESYSTEM
+#endif
+
+//! Define _IRR_IMPROVE_UNICODE to enable Input Method - MS-IME, XIM, etc - .
+/** This enables the engine to intercept input method messages. */
+#define _IRR_USE_INPUT_METHOD
+
+//! Define _IRR_COMPILE_WITH_CGUITTFONT_ to build with CGUITTFont. It isn't always necessary. If anything, not recommended.
+#define _IRR_COMPILE_WITH_CGUITTFONT_
 
 //! Define _IRR_COMPILE_WITH_JPEGLIB_ to enable compiling the engine using libjpeg.
 /** This enables the engine to read jpeg images. If you comment this out,
@@ -491,6 +506,8 @@ precision will be lower but speed higher. currently X86 only
 
 #ifndef _IRR_WINDOWS_API_
 	#undef _IRR_WCHAR_FILESYSTEM
+	#undef _IRR_IMPROVE_UNICODE
+	#undef _IRR_USE_INPUT_METHOD
 #endif
 
 #if defined(__sparc__) || defined(__sun__)

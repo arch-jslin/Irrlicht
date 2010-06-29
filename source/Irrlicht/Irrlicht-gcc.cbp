@@ -688,6 +688,7 @@
 		<Unit filename="..\..\include\irrMath.h" />
 		<Unit filename="..\..\include\irrString.h" />
 		<Unit filename="..\..\include\irrTypes.h" />
+		<Unit filename="..\..\include\irrUString.h" />
 		<Unit filename="..\..\include\irrXML.h" />
 		<Unit filename="..\..\include\irrlicht.h" />
 		<Unit filename="..\..\include\line2d.h" />

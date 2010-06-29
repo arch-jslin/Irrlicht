@@ -603,6 +603,7 @@ IFileList* CFileSystem::createFileList()
 	//! Construct from native filesystem
 	if (FileSystemType == FILESYSTEM_NATIVE)
 	{
+		io::path fullPath;
 		// --------------------------------------------
 		//! Windows version
 		#ifdef _IRR_WINDOWS_API_
@@ -610,26 +611,47 @@ IFileList* CFileSystem::createFileList()
 
 		r = new CFileList(Path, true, false);
 
-		struct _tfinddata_t c_file;
 		long hFile;
 
-		if( (hFile = _tfindfirst( _T("*"), &c_file )) != -1L )
+		#if defined(_IRR_WCHAR_FILESYSTEM)
+		struct _wfinddata_t c_file;
+
+		if( (hFile = _wfindfirst( L"*", &c_file )) != -1L )
 		{
 			do
 			{
-				r->addItem(Path + c_file.name, c_file.size, (_A_SUBDIR & c_file.attrib) != 0, 0);
+				fullPath = Path + c_file.name;
+
+				r->addItem(fullPath, c_file.size, (_A_SUBDIR & c_file.attrib) != 0, 0);
 			}
-			while( _tfindnext( hFile, &c_file ) == 0 );
+			while( _wfindnext( hFile, &c_file ) == 0 );
 
 			_findclose( hFile );
 		}
-		#endif
+		#else
+		struct _finddata_t c_file;
+
+		if( (hFile = _findfirst( "*", &c_file )) != -1L )
+		{
+			do
+			{
+				fullPath = Path + c_file.name;
+
+				r->addItem(fullPath, c_file.size, (_A_SUBDIR & c_file.attrib) != 0, 0);
+			}
+			while( _findnext( hFile, &c_file ) == 0 );
+
+			_findclose( hFile );
+		}
+		#endif // _IRR_WCHAR_FILESYSTEM
+
+		#endif // !_WIN32_WCE
 
 		//TODO add drives
 		//entry.Name = "E:\\";
 		//entry.isDirectory = true;
 		//Files.push_back(entry);
-		#endif
+		#endif // _IRR_WINDOWS_API_
 
 		// --------------------------------------------
 		//! Linux version
@@ -649,6 +671,7 @@ IFileList* CFileSystem::createFileList()
 			{
 				u32 size = 0;
 				bool isDirectory = false;
+				fullPath = Path + dirEntry->d_name;
 
 				if((strcmp(dirEntry->d_name, ".")==0) ||
 				   (strcmp(dirEntry->d_name, "..")==0))
@@ -669,7 +692,7 @@ IFileList* CFileSystem::createFileList()
 				}
 				#endif
 
-				r->addItem(Path + dirEntry->d_name, size, isDirectory, 0);
+				r->addItem(fullPath, size, isDirectory, 0);
 			}
 			closedir(dirHandle);
 		}
@@ -699,7 +722,8 @@ IFileList* CFileSystem::createFileList()
 			{
 				if (core::isInSameDirectory(Path, merge->getFullFileName(j)) == 0)
 				{
-					r->addItem(merge->getFullFileName(j), merge->getFileSize(j), merge->isDirectory(j), 0);
+					io::path fullPath = merge->getFullFileName(j);
+					r->addItem(fullPath, merge->getFileSize(j), merge->isDirectory(j), 0);
 				}
 			}
 		}
@@ -745,10 +769,8 @@ bool CFileSystem::existFile(const io::path& filename) const
 #else
 	return (_access(filename.c_str(), 0) != -1);
 #endif
-#elif defined(F_OK)
-	return (access(filename.c_str(), F_OK) != -1);
 #else
-    return (access(filename.c_str(), 0) != -1);
+	return (access(filename.c_str(), F_OK) != -1);
 #endif
 #endif
 }

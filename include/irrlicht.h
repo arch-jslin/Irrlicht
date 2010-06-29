@@ -83,9 +83,6 @@
 #include "IGUIFileOpenDialog.h"
 #include "IGUIFont.h"
 #include "IGUIFontBitmap.h"
-// >> Add by zgock for Multilingual start
-#include "IGUITTFont.h" //modified by arch_jslin 2008.11.02, interface class added
-// << Add by zgock for Multilingual end
 #include "IGUIImage.h"
 #include "IGUIInOutFader.h"
 #include "IGUIListBox.h"
@@ -186,8 +183,12 @@
 #include "triangle3d.h"
 #include "vector2d.h"
 #include "vector3d.h"
+#if defined(_IRR_COMPILE_WITH_CGUITTFONT_) // >> IrrlichtML modification 2010.06.29
+#include "IGUITTFont.h"
+#include "irrUString.h"
+#endif // <<
 
-/*! \mainpage Irrlicht Engine 1.7 API documentation
+/*! \mainpage Irrlicht Engine 1.7.1 API documentation
  *
  * <div align="center"><img src="logobig.png" ></div>
  *
