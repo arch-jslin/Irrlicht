@@ -742,7 +742,7 @@ void CGUITTFont::setInvisibleCharacters(const core::ustring& s)
 }
 
 //added by arch_jslin 2010.06.30
-video::ITexture* CGUITTFont::getTextureFromChar(const wchar_t ch)
+video::ITexture* CGUITTFont::getTextureFromChar(const wchar_t ch) const
 {
     u32 n = getGlyphIndexByChar(ch);
     return Glyphs[n-1].texture;

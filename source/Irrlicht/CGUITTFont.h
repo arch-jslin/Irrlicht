@@ -132,7 +132,7 @@ public:
 
     //! Get corresponding irrlicht video texture from the font,
     //! so you can use this font just like any ordinary texture.
-    virtual video::ITexture* getTextureFromChar(const wchar_t ch);
+    virtual video::ITexture* getTextureFromChar(const wchar_t ch) const;
 
 protected:
 // properties moved to protected scope instead of public.

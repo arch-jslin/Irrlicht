@@ -61,7 +61,7 @@ public:
     //! Get corresponding irrlicht video texture from the font,
     //! so you can use this font just like any ordinary texture.
     //! \param The character of the texture you need
-    virtual video::ITexture* getTextureFromChar(const wchar_t ch) = 0;
+    virtual video::ITexture* getTextureFromChar(const wchar_t ch) const = 0;
 };
 
 } // end namespace gui
