@@ -239,7 +239,7 @@ Environment(env), Driver(0), GlobalKerningWidth(0), GlobalKerningHeight(0)
 	if (Driver)
 		Driver->grab();
 
-	setInvisibleCharacters(L"");
+	setInvisibleCharacters(L" ");
 
 	// Glyphs isn't reference counted, so don't try to delete when we free the array.
 	Glyphs.set_free_when_destroyed(false);
@@ -568,9 +568,8 @@ inline u32 CGUITTFont::getWidthFromCharacter(uchar32_t c) const
 	u32 n = getGlyphIndexByChar(c);
 	if (n > 0)
 	{
-		// Grab the true height of the character, taking into account underhanging glyphs.
-		s32 height = (tt_face->size->metrics.ascender / 64) - Glyphs[n-1].bitmap_size.UpperLeftCorner.Y + Glyphs[n-1].bitmap_size.getHeight();
-		return height;
+		int w = Glyphs[n-1].advance.x / 64;
+		return w;
 	}
 	if (c >= 0x2000)
 		return (tt_face->size->metrics.ascender / 64);
