@@ -223,9 +223,8 @@ CGUITTFont* CGUITTFont::create(IGUIEnvironment *env, const io::path& filename, c
 
 //! constructor
 CGUITTFont::CGUITTFont(IGUIEnvironment *env)
-: Environment(env), Driver(0),
-use_monochrome(false), use_transparency(true), use_hinting(true), use_auto_hinting(true),
-GlobalKerningWidth(0), GlobalKerningHeight(0)
+: use_monochrome(false), use_transparency(true), use_hinting(true), use_auto_hinting(true),
+Environment(env), Driver(0), GlobalKerningWidth(0), GlobalKerningHeight(0)
 {
 	#ifdef _DEBUG
 	setDebugName("CGUITTFont");
@@ -240,7 +239,7 @@ GlobalKerningWidth(0), GlobalKerningHeight(0)
 	if (Driver)
 		Driver->grab();
 
-	setInvisibleCharacters(L" ");
+	setInvisibleCharacters(L"");
 
 	// Glyphs isn't reference counted, so don't try to delete when we free the array.
 	Glyphs.set_free_when_destroyed(false);
@@ -395,7 +394,7 @@ void CGUITTFont::draw(const core::stringw& text, const core::rect<s32>& position
 	while (!iter.atEnd())
 	{
 		uchar32_t currentChar = *iter;
-		n = getGlyphByChar(currentChar);
+		n = getGlyphIndexByChar(currentChar);
 		bool visible = (Invisible.findFirst(currentChar) == -1);
 		if (n > 0 && visible)
 		{
@@ -566,11 +565,12 @@ inline u32 CGUITTFont::getWidthFromCharacter(uchar32_t c) const
 	else
 		FT_Set_Char_Size(tt_face, size * 64, size * 64, 0, 0);
 
-	u32 n = getGlyphByChar(c);
+	u32 n = getGlyphIndexByChar(c);
 	if (n > 0)
 	{
-		int w = Glyphs[n-1].advance.x / 64;
-		return w;
+		// Grab the true height of the character, taking into account underhanging glyphs.
+		s32 height = (tt_face->size->metrics.ascender / 64) - Glyphs[n-1].bitmap_size.UpperLeftCorner.Y + Glyphs[n-1].bitmap_size.getHeight();
+		return height;
 	}
 	if (c >= 0x2000)
 		return (tt_face->size->metrics.ascender / 64);
@@ -591,7 +591,7 @@ inline u32 CGUITTFont::getHeightFromCharacter(uchar32_t c) const
 	else
 		FT_Set_Char_Size(tt_face, size * 64, size * 64, 0, 0);
 
-	u32 n = getGlyphByChar(c);
+	u32 n = getGlyphIndexByChar(c);
 	if (n > 0)
 	{
 		// Grab the true height of the character, taking into account underhanging glyphs.
@@ -603,12 +603,12 @@ inline u32 CGUITTFont::getHeightFromCharacter(uchar32_t c) const
 	else return (tt_face->size->metrics.ascender / 64) / 2;
 }
 
-u32 CGUITTFont::getGlyphByChar(wchar_t c) const
+u32 CGUITTFont::getGlyphIndexByChar(wchar_t c) const
 {
-	return getGlyphByChar((uchar32_t)c);
+	return getGlyphIndexByChar((uchar32_t)c);
 }
 
-u32 CGUITTFont::getGlyphByChar(uchar32_t c) const
+u32 CGUITTFont::getGlyphIndexByChar(uchar32_t c) const
 {
 	u32 character = FT_Get_Char_Index(tt_face, c);
 
@@ -713,7 +713,7 @@ core::vector2di CGUITTFont::getKerning(const uchar32_t thisLetter, const uchar32
 
 	// Get the kerning information.
 	FT_Vector v;
-	FT_Get_Kerning(tt_face, getGlyphByChar(previousLetter), getGlyphByChar(thisLetter), FT_KERNING_DEFAULT, &v);
+	FT_Get_Kerning(tt_face, getGlyphIndexByChar(previousLetter), getGlyphIndexByChar(thisLetter), FT_KERNING_DEFAULT, &v);
 
 	// If we have a scalable font, the return value will be in font points.
 	if (FT_IS_SCALABLE(tt_face))
@@ -742,65 +742,11 @@ void CGUITTFont::setInvisibleCharacters(const core::ustring& s)
 	Invisible = s;
 }
 
-//added by arch_jslin 2008.11.02
-video::ITexture* CGUITTFont::getTextureFromText(const wchar_t* text, const c8* name)
-{/*
-    if( Driver->findTexture(name) ) {    //note: critical fix!!! prevent always writing new texture!!
-        return Driver->getTexture(name); //      have to re-write SpriteText wholly in the future.
-    }
-
-    if( !AntiAlias ) AntiAlias = true;      //force this texture to be 32bit anti-aliased
-    core::dimension2d<u32> size = getDimension(text);
-    core::position2di offset= core::position2di(0,0);
-
-    u32 w = 1, h = 1;
-    while( w < size.Width ) {w <<= 1;} size.Width = w;
-    while( h < size.Height) {h <<= 1;} size.Height = h;
-
-    video::ITexture* texture = Driver->addTexture(size, name);
-
-    u32* pixel_o = (u32*)texture->lock();
-    if( !pixel_o ) { texture->unlock(); return texture; } //failed, empty texture
-
-    for( unsigned int i = 0; i < size.Height; ++i ) {
-        int yo = i * size.Width;
-        for( unsigned int j = 0; j < size.Width; ++j )
-            pixel_o[ yo + j ] = 0;
-    }
-
-    unsigned int n = 0;
-    while( *text ) {
-        if( (n = getGlyphIndex(*text)) ) {
-            n -= 1;  // 0 means no glyph, so all glyph index must dec by 1 to fit 0-based array
-            s32 texw = Glyphs[n].texw;
-            s32 texh = Glyphs[n].texh;
-            s32 offx = Glyphs[n].left;
-            s32 offy = Glyphs[n].size - Glyphs[n].top - 1;
-            u8* pixel_i = Glyphs[n].image;
-            int bound = Glyphs[n].size;
-            for(int h = 0; h < texh; ++h) {
-                int ypos = h + offy;
-                if( ypos < 0 )           ypos = 0;
-                else if( ypos >= bound ) ypos = bound-1;
-                int yo = ypos*size.Width;
-                for(int w = 0; w < texw; ++w) {
-                    int current_pos = yo + offset.X + w + offx;
-                    if( *pixel_i )
-                        pixel_o[ current_pos ] = ((*pixel_i) << 24) | 0x00ffffff;
-                    else
-                        pixel_o[ current_pos ] = 0; //else set to all black & transparent
-                    ++pixel_i;
-                }
-            }
-        }
-        offset.X += getWidthFromCharacter(*text) + GlobalKerningWidth;
-        ++text;
-    }
-
-    texture->unlock();
-
-    return texture; */
-    return 0;
+//added by arch_jslin 2010.06.30
+video::ITexture* CGUITTFont::getTextureFromChar(const wchar_t ch)
+{
+    u32 n = getGlyphIndexByChar(ch);
+    return Glyphs[n-1].texture;
 }
 
 } // end namespace gui

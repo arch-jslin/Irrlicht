@@ -130,7 +130,9 @@ public:
     virtual void setInvisibleCharacters(const wchar_t *s);
     virtual void setInvisibleCharacters(const core::ustring& s);
 
-    video::ITexture* getTextureFromText(const wchar_t* text, const c8* name); //added by arch_jslin 2008.11.02
+    //! Get corresponding irrlicht video texture from the font,
+    //! so you can use this font just like any ordinary texture.
+    virtual video::ITexture* getTextureFromChar(const wchar_t ch);
 
 protected:
 // properties moved to protected scope instead of public.
@@ -154,8 +156,8 @@ private:
     u32 getWidthFromCharacter(uchar32_t c) const;
     u32 getHeightFromCharacter(wchar_t c) const;
     u32 getHeightFromCharacter(uchar32_t c) const;
-    u32 getGlyphByChar(wchar_t c) const;
-    u32 getGlyphByChar(uchar32_t c) const;
+    u32 getGlyphIndexByChar(wchar_t c) const;
+    u32 getGlyphIndexByChar(uchar32_t c) const;
     core::vector2di getKerning(const wchar_t thisLetter, const wchar_t previousLetter) const;
     core::vector2di getKerning(const uchar32_t thisLetter, const uchar32_t previousLetter) const;
 

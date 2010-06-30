@@ -2717,14 +2717,14 @@ public:
 
 	//! Gets the encoding of the Unicode string this class contains.
 	//! \return An enum describing the current encoding of this string.
-	const unicode::EUTF_ENCODE getEncoding() const
+	unicode::EUTF_ENCODE getEncoding() const
 	{
 		return encoding;
 	}
 
 	//! Gets the endianness of the Unicode string this class contains.
 	//! \return An enum describing the endianness of this string.
-	const unicode::EUTF_ENDIAN getEndianness() const
+	unicode::EUTF_ENDIAN getEndianness() const
 	{
 		if (encoding == unicode::EUTFE_UTF16_LE ||
 			encoding == unicode::EUTFE_UTF32_LE)
