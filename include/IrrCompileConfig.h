@@ -181,7 +181,7 @@ for Windows based systems. */
 #define _IRR_USE_INPUT_METHOD_
 
 //! Define _IRR_COMPILE_WITH_CGUITTFONT_ to build with CGUITTFont. It isn't always necessary. If anything, not recommended.
-#define _IRR_COMPILE_WITH_CGUITTFONT_
+//#define _IRR_COMPILE_WITH_CGUITTFONT_
 
 //! Define _IRR_COMPILE_WITH_JPEGLIB_ to enable compiling the engine using libjpeg.
 /** This enables the engine to read jpeg images. If you comment this out,
