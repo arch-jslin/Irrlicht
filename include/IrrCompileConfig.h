@@ -173,7 +173,11 @@ for Windows based systems. */
 #define _IRR_IMPROVE_UNICODE_
 
 #ifdef _IRR_IMPROVE_UNICODE_
-	#define _IRR_WCHAR_FILESYSTEM
+  #ifdef _IRR_WINDOWS_API_
+    //#define UNICODE
+    //#define _UNICODE
+  #endif
+	//#define _IRR_WCHAR_FILESYSTEM
 #endif
 
 //! Define _IRR_IMPROVE_UNICODE_ to enable Input Method - MS-IME, XIM, etc - .

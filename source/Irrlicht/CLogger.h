@@ -31,7 +31,7 @@ public:
 
 	//! Prints out a text into the log
 	virtual void log(const wchar_t* text, ELOG_LEVEL ll=ELL_INFORMATION);
-	
+
 	//! Prints out a text into the log
 	virtual void log(const c8* text, const c8* hint, ELOG_LEVEL ll=ELL_INFORMATION);
 
@@ -40,6 +40,8 @@ public:
 
 	//! Prints out a text into the log
 	virtual void log(const wchar_t* text, const wchar_t* hint, ELOG_LEVEL ll=ELL_INFORMATION);
+	virtual void log(const wchar_t* text, const char* hint, ELOG_LEVEL ll=ELL_INFORMATION);
+	// >> added by arch_jslin 2010.07.01
 
 	//! Sets a new event receiver
 	void setReceiver(IEventReceiver* r);

@@ -78,6 +78,8 @@ public:
 	filtered with these levels. If you want to be a text displayed,
 	independent on what level filter is set, use ELL_NONE. */
 	virtual void log(const wchar_t* text, const wchar_t* hint, ELOG_LEVEL ll=ELL_INFORMATION) = 0;
+	virtual void log(const wchar_t* text, const char* hint, ELOG_LEVEL ll=ELL_INFORMATION) = 0;
+	// >> added by arch_jslin 2010.07.01
 
 	//! Prints out a text into the log
 	/** \param text: Text to print out.

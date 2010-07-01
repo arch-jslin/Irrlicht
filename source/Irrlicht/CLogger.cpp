@@ -107,6 +107,26 @@ namespace irr
 #endif
 	}
 // <<
+// >> IrrlichtML modification 2010.07.01 by arch_jslin
+	//! Prints out a text into the log
+	void CLogger::log(const wchar_t* text, const char* hint, ELOG_LEVEL ll)
+	{
+		if (ll < LogLevel)
+			return;
+
+#if defined(_IRR_IMPROVE_UNICODE_)
+		core::stringw s = text;
+		s += L": ";
+		s += hint;
+		log (s.c_str(), ll);
+#else
+		core::stringc s1 = text;
+		core::stringc s2 = hint;
+		log(s1.c_str(), s2.c_str(), ll);
+#endif
+	}
+// <<
+
 	//! Prints out a text into the log
 	void CLogger::log(const c8* text, const wchar_t* hint, ELOG_LEVEL ll)
 	{
