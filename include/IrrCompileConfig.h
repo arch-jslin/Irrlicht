@@ -170,13 +170,11 @@ for Windows based systems. */
 
 //! Define _IRR_IMPROVE_UNICODE_ to enable unicode support for Logger, Clipbord. and care surrogate pair in CGUIEditBox.
 /** Use with define _IRR_WCHAR_FILESYSTEM and UNICODE */
-#define _IRR_IMPROVE_UNICODE_
+//#define _IRR_IMPROVE_UNICODE_
 
 #ifdef _IRR_IMPROVE_UNICODE_
-  #ifdef _IRR_WINDOWS_API_
     //#define UNICODE
     //#define _UNICODE
-  #endif
 	//#define _IRR_WCHAR_FILESYSTEM
 #endif
 
