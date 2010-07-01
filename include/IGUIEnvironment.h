@@ -171,10 +171,12 @@ public:
 	//! Returns pointer to the font with the specified filename.
 	/** Loads the font if it was not loaded before.
 	\param filename Filename of the Font.
+	\param size_in_pixel True if you want the unit of fontsize be pixel. Normally the unit will be 'point'.
 	\return Pointer to the font. Returns 0 if the font could not be loaded.
 	This pointer should not be dropped. See IReferenceCounted::drop() for
 	more information. */ //What's the hell with { return getFont(filename); } ???? arch_jslin 2010.06.29
-	virtual IGUITTFont* getFont(const io::path& filename, u32 fontsize, bool antialias = true, bool transparency = true) = 0;
+	virtual IGUITTFont* getFont(const io::path& filename, u32 fontsize, bool size_in_pixel = false,
+                                bool antialias = true, bool transparency = true) = 0;
 #endif
 // <<
 	//! Adds an externally loaded font to the font list.
