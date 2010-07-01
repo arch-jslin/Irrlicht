@@ -145,6 +145,8 @@ inline core::array<u8> getUnicodeBOM(EUTF_ENCODE mode)
 	core::array<u8> ret(4);
 	switch (mode)
 	{
+	    case EUTFE_NONE: // do nothing, just getting rid of that warning.
+            break;
 		case EUTFE_UTF8:
 			COPY_ARRAY(BOM_ENCODE_UTF8, BOM_ENCODE_UTF8_LEN);
 			break;
