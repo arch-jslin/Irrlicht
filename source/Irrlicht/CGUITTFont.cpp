@@ -485,6 +485,11 @@ void CGUITTFont::draw(const core::stringw& text, const core::rect<s32>& position
 	}
 }
 
+core::dimension2d<u32> CGUITTFont::getCharDimension(const wchar_t ch) const
+{
+    return core::dimension2d<u32>( getWidthFromCharacter(ch), getHeightFromCharacter(ch) );
+}
+
 core::dimension2d<u32> CGUITTFont::getDimension(const wchar_t* text) const
 {
 	return getDimension(core::ustring(text));

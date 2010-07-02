@@ -105,6 +105,9 @@ public:
         video::SColor color, bool hcenter=false, bool vcenter=false,
         const core::rect<s32>* clip=0);
 
+    //! Returns the dimension of a character produced by this font.
+    virtual core::dimension2d<u32> getCharDimension(const wchar_t ch) const;
+
     //! Returns the dimension of a text string.
     virtual core::dimension2d<u32> getDimension(const wchar_t* text) const;
     virtual core::dimension2d<u32> getDimension(const core::ustring& text) const;

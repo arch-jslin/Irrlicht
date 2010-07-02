@@ -62,6 +62,9 @@ public:
     //! so you can use this font just like any ordinary texture.
     //! \param The character of the texture you need
     virtual video::ITexture* getTextureFromChar(const wchar_t ch) const = 0;
+
+    //! Returns the dimension of a character produced by this font.
+    virtual core::dimension2d<u32> getCharDimension(const wchar_t ch) const = 0;
 };
 
 } // end namespace gui
