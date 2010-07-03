@@ -25,6 +25,8 @@ struct SGUITTFace : public virtual irr::IReferenceCounted
 FT_Library                       CGUITTFont::c_library;
 core::map<io::path, SGUITTFace*> CGUITTFont::c_faces;
 bool                             CGUITTFont::c_libraryLoaded = false;
+scene::IMesh*                    CGUITTFont::shared_plane_ptr_ = 0;
+scene::SMesh                     CGUITTFont::shared_plane_;
 
 void SGUITTGlyph::load(u32 character, FT_Face face, video::IVideoDriver* driver, u32 size, bool size_in_pixel, bool fontHinting, bool autoHinting, bool useMonochrome)
 {
@@ -371,10 +373,11 @@ void CGUITTFont::draw(const core::stringw& text, const core::rect<s32>& position
 
 	core::dimension2d<s32> textDimension;
 	core::position2d<s32> offset = position.UpperLeftCorner;
+	/* unused codes
 	video::SColor colors[4];
 	for (int i = 0; i < 4; i++)
 		colors[i] = color;
-
+    */
 	if (hcenter || vcenter)
 	{
 		textDimension = getDimension(text.c_str());
@@ -746,12 +749,160 @@ void CGUITTFont::setInvisibleCharacters(const core::ustring& s)
 	Invisible = s;
 }
 
-//added by arch_jslin 2010.06.30
+// >> added by arch_jslin 2010.06.30 ~ 2010.07.05
 video::ITexture* CGUITTFont::getTextureFromChar(const wchar_t ch) const
 {
     u32 n = getGlyphIndexByChar(ch);
     return Glyphs[n-1].texture;
 }
+
+void CGUITTFont::createSharedPlane()
+{
+    using namespace core;
+    using namespace video;
+    using namespace scene;
+    S3DVertex vertices[4];
+    u16 indices[6] = {0,2,3,3,1,0};
+    vertices[0] = S3DVertex( vector3df(0,-1,0), vector3df(0,0,-1),
+                             SColor(255,255,255,255), vector2df(0,1) );
+    vertices[1] = S3DVertex( vector3df(1,-1,0), vector3df(0,0,-1),
+                             SColor(255,255,255,255), vector2df(1,1) );
+    vertices[2] = S3DVertex( vector3df(0, 0,0), vector3df(0,0,-1),
+                             SColor(255,255,255,255), vector2df(0,0) );
+    vertices[3] = S3DVertex( vector3df(1, 0,0), vector3df(0,0,-1),
+                             SColor(255,255,255,255), vector2df(1,0) );
+
+    SMeshBuffer* buf = new SMeshBuffer();
+    buf->append(vertices, 4, indices, 6);
+
+    shared_plane_.addMeshBuffer( buf );
+
+    shared_plane_ptr_ = &shared_plane_;
+    buf->drop(); //the addMeshBuffer method will grab it, so we can drop this ptr.
+}
+
+core::array<scene::ISceneNode*> CGUITTFont::addTextSceneNode
+    (const wchar_t* text, scene::ISceneManager* smgr, scene::ISceneNode* parent, const video::SColor& color, bool center)
+{
+    using namespace core;
+    using namespace video;
+    using namespace scene;
+
+    array<scene::ISceneNode*> container;
+
+    if( !smgr ) return container;
+    if( !parent )
+        parent = smgr->addEmptySceneNode(smgr->getRootSceneNode(), -1);
+    //if you don't specify parent, then we add a empty node attached to the root node
+    //this is generally undesirable.
+
+    if( !shared_plane_ptr_ ) //this points to a static mesh that contains the plane
+        createSharedPlane(); //if it's not initialized, we create one.
+
+    dimension2d<s32> text_size( getDimension(text) ); //convert from unsigned to signed.
+    vector3df start_point(0, 0, 0), offset;
+
+    /** NOTICE:
+        Because we are considering adding texts into 3D world, all Y axis vectors are inverted.
+    **/
+
+    if( center ) {
+        offset.X = start_point.X = -text_size.Width / 2.f;
+        offset.Y = start_point.Y = +text_size.Height/ 2.f;
+        core::stringw s;
+        for(const wchar_t* temp = text; temp && *temp != '\0' && *temp != L'\r' && *temp != L'\n'; ++temp )
+            s.append(*temp); //collect the next line to estimate the width
+        offset.X += ( text_size.Width - getDimension(s.c_str()).Width ) >> 1;
+    }
+
+    //the default font material
+    SMaterial mat;
+    mat.setFlag(video::EMF_LIGHTING, true);
+    mat.setFlag(video::EMF_ZWRITE_ENABLE, false);
+    mat.setFlag(video::EMF_NORMALIZE_NORMALS, true);
+    mat.ColorMaterial = video::ECM_NONE;
+    mat.MaterialType = use_transparency ? video::EMT_TRANSPARENT_MODULATE : video::EMT_SOLID;
+    mat.MaterialTypeParam = 0.01f;
+    mat.DiffuseColor = color;
+
+    wchar_t current_char = 0, previous_char = 0;
+    u32 n = 0;
+
+    while( *text ) {
+        current_char = *text;
+        bool line_break=false;
+        if ( current_char == L'\r' ) { // Mac or Windows breaks
+            line_break = true;
+            if ( *(text + 1) == L'\n' )	// Windows line breaks.
+                current_char = *(++text);
+        }
+        else if ( current_char == L'\n' ) { // Unix breaks
+            line_break = true;
+        }
+
+        if (line_break) {
+            previous_char = 0;
+            offset.Y -= tt_face->size->metrics.ascender / 64;
+            offset.X =  start_point.X;
+            if (center) {
+                core::stringw s;
+                for(const wchar_t* temp = text+1; temp && *temp != '\0' && *temp != L'\r' && *temp != L'\n'; ++temp )
+                    s.append(*temp); //collect the next line to estimate the width
+                offset.X += ( text_size.Width - getDimension(s.c_str()).Width ) >> 1;
+            }
+            ++text;
+        }
+        else {
+            n = getGlyphIndexByChar(current_char);
+            if( n > 0 ) {
+                // Store some useful information.
+                SGUITTGlyph const& glyph = Glyphs[n-1];
+                u32 texw = glyph.texture_size.Width;
+                u32 texh = glyph.texture_size.Height;
+                s32 offx = glyph.bitmap_size.UpperLeftCorner.X;
+                s32 offy = (tt_face->size->metrics.ascender / 64) - glyph.bitmap_size.UpperLeftCorner.Y;
+
+                // Apply kerning.
+                vector2di k = getKerning(current_char, previous_char);
+                offset.X += k.X;
+                offset.Y += k.Y;
+
+                ITexture* current_tex = getTextureFromChar(current_char); //get texture directly from glyph cache
+
+                vector3df        current_pos(offset.X + offx, offset.Y - offy, 0);
+                dimension2d<u32> letter_size = dimension2d<u32>( texw-1, texh-1 );
+
+                //Now we copy planes corresponding to the letter size
+                IMeshManipulator* mani = smgr->getMeshManipulator();
+                IMesh* meshcopy = mani->createMeshCopy( shared_plane_ptr_ );
+                mani->scaleMesh( meshcopy, vector3df(letter_size.Width, letter_size.Height, 1) );
+
+                //Because I got very strange texture artifacts (looks like texture wrapped around the mesh)
+                //So I have to adjust uv coordinates accordingly.
+                S3DVertex* pv = static_cast<S3DVertex*>(meshcopy->getMeshBuffer(0)->getVertices());
+                pv[0].TCoords.Y = pv[1].TCoords.Y = (letter_size.Height - 1) / static_cast<f32>(letter_size.Height);
+                pv[1].TCoords.X = pv[3].TCoords.X = (letter_size.Width - 1)  / static_cast<f32>(letter_size.Width);
+
+                ISceneNode* current_node = smgr->addMeshSceneNode( meshcopy, parent, -1, current_pos );
+                meshcopy->drop();
+
+                mat.setTexture(0, current_tex);
+                current_node->getMaterial(0) = mat;
+                current_node->setAutomaticCulling(EAC_OFF);
+                current_node->setIsDebugObject(true);  //so the picking won't have any effect on individual letter
+                //current_node->setDebugDataVisible(EDS_BBOX); //de-comment this when debugging
+
+                container.push_back( current_node );
+            }
+            offset.X += getWidthFromCharacter(current_char);
+            previous_char = current_char;
+            ++text;
+        }
+    }
+
+    return container;
+}
+// <<
 
 } // end namespace gui
 } // end namespace irr
