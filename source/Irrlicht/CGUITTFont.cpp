@@ -867,8 +867,7 @@ core::array<scene::ISceneNode*> CGUITTFont::addTextSceneNode
                 offset.X += k.X;
                 offset.Y += k.Y;
 
-                ITexture* current_tex = getTextureFromChar(current_char); //get texture directly from glyph cache
-
+                ITexture*        current_tex = glyph.texture;
                 vector3df        current_pos(offset.X + offx, offset.Y - offy, 0);
                 dimension2d<u32> letter_size = dimension2d<u32>( texw-1, texh-1 );
 
