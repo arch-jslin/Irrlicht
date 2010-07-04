@@ -726,7 +726,7 @@ void COpenGLDriver::createMaterialRenderers()
 	addAndDropMaterialRenderer(new COpenGLMaterialRenderer_TRANSPARENT_ALPHA_CHANNEL_REF(this));
 	addAndDropMaterialRenderer(new COpenGLMaterialRenderer_TRANSPARENT_VERTEX_ALPHA(this));
 	addAndDropMaterialRenderer(new COpenGLMaterialRenderer_TRANSPARENT_REFLECTION_2_LAYER(this));
-//added by arch_jslin 2010.06.27
+// >> added by arch_jslin 2010.06.27
     addAndDropMaterialRenderer(new COpenGLMaterialRenderer_TRANSPARENT_MODULATE(this));
 
 	// add normal map renderers
