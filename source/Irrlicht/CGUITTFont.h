@@ -1,72 +1,156 @@
 #ifndef __C_GUI_TTFONT_H_INCLUDED__
 #define __C_GUI_TTFONT_H_INCLUDED__
 
+#if defined(_IRR_COMPILE_WITH_CGUITTFONT_)
+
 #include <irrlicht.h>
 #include <ft2build.h>
 #include FT_FREETYPE_H
-
-#if defined(_IRR_COMPILE_WITH_CGUITTFONT_)
 
 namespace irr
 {
 namespace gui
 {
-    //forward added by arch_jslin 2010.06.29
-    struct SGUITTFace;
-	//! Structure representing a single TrueType glyph.
-	struct SGUITTGlyph
-	{
-		//! Loads the glyph.
-		void load(u32 character, FT_Face face, video::IVideoDriver* driver, u32 size,
-                  bool size_is_pixels, bool fontHinting, bool autoHinting, bool useMonochrome);
 
-		//! Unloads the glyph.
-		void unload(video::IVideoDriver* driver);
+//forward added by arch_jslin 2010.06.29
+struct SGUITTFace;
 
-		//! If true, the glyph has been loaded.
-		bool isLoaded;
+// Assists us in deleting Glyphs.
+class CGUITTAssistDelete
+{
+public:
+    template <class T, typename TAlloc>
+    static void Delete(core::array<T, TAlloc>& a)
+    {
+        TAlloc allocator;
+        allocator.deallocate(a.pointer());
+    }
+};
 
-		//! The image data.
-		//! Only used when rendering grayscale font images using the EDT_SOFTWARE driver.
-		//! EDT_SOFTWARE forces A1R5G5B5 textures.  We store the IImage so we can calculate
-		//! the correct alpha color.
-		video::IImage* image;
+//! Holds a sheet of glyphs.
+class CGUITTGlyphPage
+{
+public:
+    CGUITTGlyphPage(video::IVideoDriver* Driver, const io::path& texture_name)
+        :image(0), texture(0), available_slots(0), used_slots(0), dirty(false), driver(Driver), name(texture_name) {}
+    ~CGUITTGlyphPage()
+    {
+        if (image)
+            image->drop();
+        if (texture)
+        {
+            if (driver)
+                driver->removeTexture(texture);
+            else texture->drop();
+        }
+    }
 
-		// Texture/image data.
-		video::ITexture* texture;
+    //! Updates the texture if dirty.
+    void updateTexture()
+    {
+        static u32 test = 0;
+        dirty = false;
 
-		// Bitmap information.
-		core::rect<u32> bitmap_size;
+        // Save our texture creation flags and disable mipmaps.
+        bool flg16 = driver->getTextureCreationFlag(video::ETCF_ALWAYS_16_BIT);
+        bool flg32 = driver->getTextureCreationFlag(video::ETCF_ALWAYS_32_BIT);
+        bool flgmip = driver->getTextureCreationFlag(video::ETCF_CREATE_MIP_MAPS);
+        driver->setTextureCreationFlag(video::ETCF_CREATE_MIP_MAPS, false);
 
-		// Texture information.
-		core::dimension2du texture_size;
+        // Set the texture color format.
+        switch (image->getColorFormat())
+        {
+            case video::ECF_A1R5G5B5:
+                // We want to create a 16-bit texture.
+                driver->setTextureCreationFlag(video::ETCF_ALWAYS_16_BIT, true);
+                driver->setTextureCreationFlag(video::ETCF_ALWAYS_32_BIT, false);
+                break;
 
-		// Glyph advance information.
-		FT_Vector advance;
-	};
+            case video::ECF_A8R8G8B8:
+            default:
+                // We want to create a 32-bit texture.
+                driver->setTextureCreationFlag(video::ETCF_ALWAYS_16_BIT, false);
+                driver->setTextureCreationFlag(video::ETCF_ALWAYS_32_BIT, true);
+                break;
+        }
+
+        // Add the texture.
+        if (texture)
+        {
+            driver->setMaterial(video::SMaterial());
+            driver->removeTexture(texture);
+        }
+        texture = driver->addTexture(name, image);
+
+        // Restore our texture creation flags.
+        driver->setTextureCreationFlag(video::ETCF_CREATE_MIP_MAPS, flgmip);
+        driver->setTextureCreationFlag(video::ETCF_ALWAYS_32_BIT, flg32);
+        driver->setTextureCreationFlag(video::ETCF_ALWAYS_16_BIT, flg16);
+    }
+
+    video::IImage* image;
+    video::ITexture* texture;
+    u32 available_slots;
+    u32 used_slots;
+    bool dirty;
+
+    core::array<core::vector2di> render_positions;
+    core::array<core::recti> render_source_rects;
+
+private:
+    video::IVideoDriver* driver;
+    io::path name;
+};
+
+//! Structure representing a single TrueType glyph.
+struct SGUITTGlyph
+{
+    //! Loads the glyph.
+    void load(u32 character, FT_Face face, video::IVideoDriver* driver, u32 size,
+              core::dimension2du max_texture_size, core::array<CGUITTGlyphPage*>* Glyph_Pages,
+              bool fontHinting, bool autoHinting, bool useMonochrome);
+
+    //! Unloads the glyph.
+    void unload();
+
+    //! If true, the glyph has been loaded.
+    bool isLoaded;
+
+    //! The page the glyph is on.
+    u32 glyph_page;
+
+    //! The source rectangle for the glyph.
+    core::recti source_rect;
+
+    //! The offset of glyph when drawn.
+    core::vector2di offset;
+
+    // Glyph advance information.
+    FT_Vector advance;
+};
 
 //! Class representing a TrueType font.
 class CGUITTFont : public IGUITTFont
 {
 public:
-    //! Creates a new TrueType font and returns a pointer to it.
-    //! The pointer must be drop()'ed when finished.
+    //! Creates a new TrueType font and returns a pointer to it.  The pointer must be drop()'ed when finished.
     //! \param env The IGUIEnvironment the font loads out of.
     //! \param filename The filename of the font.
-    //! \param size The size of the font.
-    //! \param size_in_pixel If true, size is represented as pixels instead of points.
+    //! \param size The size of the font glyphs in pixels.  Since this is the size of the individual glyphs, the true height of the font may change depending on the characters used.
     //! \return Returns a pointer to a CGUITTFont.  Will return 0 if the font failed to load.
-    static CGUITTFont* create(IGUIEnvironment *env, const io::path& filename, const u32 size,
-                              const bool size_in_pixel = false);
+    static CGUITTFont* create(IGUIEnvironment *env, const io::path& filename, const u32 size);
 
     //! Destructor
     virtual ~CGUITTFont();
 
+    //! Sets the amount of glyphs to batch load.
+    virtual void setBatchLoadSize(u32 batch_size) { batch_load_size = batch_size; }
+
+    //! Sets the maximum texture size for a page of glyphs.
+    virtual void setMaxPageTextureSize(const core::dimension2du& texture_size) { max_page_texture_size = texture_size; }
+
     //! Get the font size (default unit is point).
     virtual u32 getFontSize() const { return size; }
-
-    //! Check the unit of size (in pixel or in point).
-    virtual bool isSizeInPixel() const { return size_in_pixel; }
 
     //! Check the font's transparency.
     virtual bool isTransparent() const { return use_transparency; }
@@ -133,6 +217,12 @@ public:
     virtual void setInvisibleCharacters(const wchar_t *s);
     virtual void setInvisibleCharacters(const core::ustring& s);
 
+    void forceGlyphUpdate()
+    {
+        for (u32 i = 0; i != Glyph_Pages.size(); ++i)
+            Glyph_Pages[i]->updateTexture();
+    }
+
     //! Get corresponding irrlicht video texture from the font,
     //! so you can use this font just like any ordinary texture.
     virtual video::ITexture* getTextureFromChar(const wchar_t ch) const;
@@ -144,12 +234,13 @@ public:
 
 protected:
 // properties moved to protected scope instead of public.
-    bool use_monochrome;
-    bool use_transparency;
-    bool use_hinting;
-    bool use_auto_hinting;
-    u32  size;
-    bool size_in_pixel;
+    bool               use_monochrome;
+    bool               use_transparency;
+    bool               use_hinting;
+    bool               use_auto_hinting;
+    u32                size;
+    u32                batch_load_size;
+    core::dimension2du max_page_texture_size;
 
 private:
     // Manages the FreeType library.
@@ -160,7 +251,9 @@ private:
     static scene::SMesh  shared_plane_;
 
     CGUITTFont(IGUIEnvironment *env);
-    bool load(const io::path& filename, const u32 size, const bool size_in_pixel = false);
+    bool load(const io::path& filename, const u32 size);
+    void reset_images();
+    void update_glyph_pages() const;
 
     u32 getWidthFromCharacter(wchar_t c) const;
     u32 getWidthFromCharacter(uchar32_t c) const;
@@ -177,7 +270,9 @@ private:
     video::IVideoDriver* Driver;
     io::path filename;
     FT_Face tt_face;
+    FT_Size_Metrics font_metrics;
 
+    mutable core::array<CGUITTGlyphPage*> Glyph_Pages;
     mutable core::array<SGUITTGlyph> Glyphs;
 
     s32 GlobalKerningWidth;

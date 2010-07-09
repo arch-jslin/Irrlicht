@@ -1509,7 +1509,7 @@ IGUITTFont* CGUIEnvironment::getFont(const io::path& filename, u32 fontsize, boo
 		return 0;
 	}
 
-	CGUITTFont* font = CGUITTFont::create(this, tf.NamedPath.getPath(), tf.size, size_in_pixel);
+	CGUITTFont* font = CGUITTFont::create(this, tf.NamedPath.getPath(), tf.size);
 
 	if(!font)
 		return 0;

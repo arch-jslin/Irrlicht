@@ -20,11 +20,19 @@ public:
 	//! destructor
 	virtual ~IGUITTFont() {}
 
+    //! Sets the amount of glyphs to batch load.
+    //! When a new glyph is loaded, the class also loads extra glyphs which surround the target glyph.
+    //! For example, if batch_size is set to 50 and you try to load glyph 100, the class will load glyphs 75-125.
+    //! \param batch_size The amount of glyphs to batch load.  Defaults to 100.
+    virtual void setBatchLoadSize(u32 batch_size) = 0;
+
+    //! Sets the maximum texture size for a page of glyphs.
+    //! By default, it creates a texture large enough for at least 400 glyphs.
+    //! \param texture_size The maximum size of the texture.
+    virtual void setMaxPageTextureSize(const core::dimension2du& texture_size) = 0;
+
     //! Get the font size (default unit is point).
     virtual u32 getFontSize() const = 0;
-
-    //! Check the unit of size (in pixel or in point).
-    virtual bool isSizeInPixel() const = 0;
 
     //! Check the font's transparency.
     virtual bool isTransparent() const = 0;

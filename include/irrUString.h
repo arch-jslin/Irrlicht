@@ -182,6 +182,19 @@ inline core::array<u8> getUnicodeBOM(EUTF_ENCODE mode)
 #undef COPY_ARRAY
 }
 
+//! Detects if the given data stream starts with a unicode BOM.
+//! \param data The data stream to check.
+//! \return The unicode BOM associated with the data stream, or EUTFE_NONE if none was found.
+inline EUTF_ENCODE determineUnicodeBOM(const char* data)
+{
+	if (memcmp(data, BOM_ENCODE_UTF8, 3) == 0) return EUTFE_UTF8;
+	if (memcmp(data, BOM_ENCODE_UTF16_BE, 2) == 0) return EUTFE_UTF16_BE;
+	if (memcmp(data, BOM_ENCODE_UTF16_LE, 2) == 0) return EUTFE_UTF16_LE;
+	if (memcmp(data, BOM_ENCODE_UTF32_BE, 4) == 0) return EUTFE_UTF32_BE;
+	if (memcmp(data, BOM_ENCODE_UTF32_LE, 4) == 0) return EUTFE_UTF32_LE;
+	return EUTFE_NONE;
+}
+
 } // end namespace unicode
 
 
@@ -829,7 +842,78 @@ public:
 	}
 
 
-	//! Constructor for copying a ustring16 from a pointer with a given length
+	//! Constructor for copying a character string from a pointer.
+	ustring16(const char* const c)
+	: array(0), allocated(0), used(0)
+	{
+#if __BIG_ENDIAN__
+		encoding = unicode::EUTFE_UTF16_BE;
+#else
+		encoding = unicode::EUTFE_UTF16_LE;
+#endif
+
+		loadDataStream(c, strlen(c));
+		//append((uchar8_t*)c);
+	}
+
+
+	//! Constructor for copying a character string from a pointer with a given length.
+	ustring16(const char* const c, u32 length)
+	: array(0), allocated(0), used(0)
+	{
+#if __BIG_ENDIAN__
+		encoding = unicode::EUTFE_UTF16_BE;
+#else
+		encoding = unicode::EUTFE_UTF16_LE;
+#endif
+
+		loadDataStream(c, length);
+	}
+
+
+	//! Constructor for copying a UTF-8 string from a pointer.
+	ustring16(const uchar8_t* const c)
+	: array(0), allocated(0), used(0)
+	{
+#if __BIG_ENDIAN__
+		encoding = unicode::EUTFE_UTF16_BE;
+#else
+		encoding = unicode::EUTFE_UTF16_LE;
+#endif
+
+		append(c);
+	}
+
+
+	//! Constructor for copying a UTF-8 string from a pointer with a given length.
+	ustring16(const uchar8_t* const c, u32 length)
+	: array(0), allocated(0), used(0)
+	{
+#if __BIG_ENDIAN__
+		encoding = unicode::EUTFE_UTF16_BE;
+#else
+		encoding = unicode::EUTFE_UTF16_LE;
+#endif
+
+		append(c, length);
+	}
+
+
+	//! Constructor for copying a UTF-16 string from a pointer.
+	ustring16(const uchar16_t* const c)
+	: array(0), allocated(0), used(0)
+	{
+#if __BIG_ENDIAN__
+		encoding = unicode::EUTFE_UTF16_BE;
+#else
+		encoding = unicode::EUTFE_UTF16_LE;
+#endif
+
+		append(c);
+	}
+
+
+	//! Constructor for copying a UTF-16 string from a pointer with a given length
 	ustring16(const uchar16_t* const c, u32 length)
 	: array(0), allocated(0), used(0)
 	{
@@ -839,50 +923,12 @@ public:
 		encoding = unicode::EUTFE_UTF16_LE;
 #endif
 
-		if (!c)
-		{
-			// correctly init the ustring16 to an empty one
-			*this="";
-			return;
-		}
-
-		// Check for the BOM to determine the string's endianness.
-		unicode::EUTF_ENDIAN c_end = unicode::EUTFEE_NATIVE;
-		if (memcmp(c, unicode::BOM_ENCODE_UTF16_LE, unicode::BOM_ENCODE_UTF16_LEN) == 0)
-			c_end = unicode::EUTFEE_LITTLE;
-		else if (memcmp(c, unicode::BOM_ENCODE_UTF16_BE, unicode::BOM_ENCODE_UTF16_LEN) == 0)
-			c_end = unicode::EUTFEE_BIG;
-
-		// If a BOM was found, don't include it in the string.
-		const uchar16_t* c2 = c;
-		if (c_end != unicode::EUTFEE_NATIVE)
-		{
-			c2 = c + unicode::BOM_UTF16_LEN;
-			length -= unicode::BOM_UTF16_LEN;
-		}
-
-		allocated = used = length+1;
-		array = allocator.allocate(used); // new u16[used];
-
-		// Copy the string now.
-		unicode::EUTF_ENDIAN m_end = getEndianness();
-		for (u32 l = 0; l<length; ++l)
-		{
-			array[l] = (uchar16_t)c2[l];
-			if (c_end != unicode::EUTFEE_NATIVE && c_end != m_end)
-				array[l] = unicode::swapEndian16(array[l]);
-		}
-
-		array[length] = 0;
-
-		// Validate our new UTF-16 string.
-		validate();
+		append(c, length);
 	}
 
 
-	//! Constructor for unicode and ascii strings
-	template <class B>
-	ustring16(const B* const c)
+	//! Constructor for copying a UTF-32 string from a pointer.
+	ustring16(const uchar32_t* const c)
 	: array(0), allocated(0), used(0)
 	{
 #if __BIG_ENDIAN__
@@ -891,7 +937,59 @@ public:
 		encoding = unicode::EUTFE_UTF16_LE;
 #endif
 
-		*this = c;
+		append(c);
+	}
+
+
+	//! Constructor for copying a UTF-32 from a pointer with a given length.
+	ustring16(const uchar32_t* const c, u32 length)
+	: array(0), allocated(0), used(0)
+	{
+#if __BIG_ENDIAN__
+		encoding = unicode::EUTFE_UTF16_BE;
+#else
+		encoding = unicode::EUTFE_UTF16_LE;
+#endif
+
+		append(c, length);
+	}
+
+
+	//! Constructor for copying a wchar_t string from a pointer.
+	ustring16(const wchar_t* const c)
+	: array(0), allocated(0), used(0)
+	{
+#if __BIG_ENDIAN__
+		encoding = unicode::EUTFE_UTF16_BE;
+#else
+		encoding = unicode::EUTFE_UTF16_LE;
+#endif
+
+		if (sizeof(wchar_t) == 4)
+			append(reinterpret_cast<const uchar32_t* const>(c));
+		else if (sizeof(wchar_t) == 2)
+			append(reinterpret_cast<const uchar16_t* const>(c));
+		else if (sizeof(wchar_t) == 1)
+			append(reinterpret_cast<const uchar8_t* const>(c));
+	}
+
+
+	//! Constructor for copying a wchar_t string from a pointer with a given length.
+	ustring16(const wchar_t* const c, u32 length)
+	: array(0), allocated(0), used(0)
+	{
+#if __BIG_ENDIAN__
+		encoding = unicode::EUTFE_UTF16_BE;
+#else
+		encoding = unicode::EUTFE_UTF16_LE;
+#endif
+
+		if (sizeof(wchar_t) == 4)
+			append(reinterpret_cast<const uchar32_t* const>(c), length);
+		else if (sizeof(wchar_t) == 2)
+			append(reinterpret_cast<const uchar16_t* const>(c), length);
+		else if (sizeof(wchar_t) == 1)
+			append(reinterpret_cast<const uchar8_t* const>(c), length);
 	}
 
 
@@ -972,186 +1070,17 @@ public:
 	//! Assignment operator for UTF-8 strings
 	ustring16<TAlloc>& operator=(const uchar8_t* const c)
 	{
-		if (!c)
+		if (!array)
 		{
-			if (!array)
-			{
-				array = allocator.allocate(1); //new u16[1];
-				allocated = 1;
-			}
-			used = 1;
-			array[0] = 0x0;
-			return *this;
+			array = allocator.allocate(1); //new u16[1];
+			allocated = 1;
 		}
+		used = 1;
+		array[0] = 0x0;
+		if (!c) return *this;
 
-		// Determine if the string is long enough for a BOM.
-		u32 len = 0;
-		const uchar8_t* p = c;
-		do
-		{
-			++len;
-		} while (*p++ && len < unicode::BOM_ENCODE_UTF8_LEN);
-
-		// Check for BOM.
-		unicode::EUTF_ENCODE c_bom = unicode::EUTFE_NONE;
-		if (len == unicode::BOM_ENCODE_UTF8_LEN)
-		{
-			if (memcmp(c, unicode::BOM_ENCODE_UTF8, unicode::BOM_ENCODE_UTF8_LEN) == 0)
-				c_bom = unicode::EUTFE_UTF8;
-		}
-
-		// If a BOM was found, don't include it in the string.
-		const uchar8_t* c2 = c;
-		if (c_bom != unicode::EUTFE_NONE)
-			c2 = c + unicode::BOM_UTF8_LEN;
-
-		// Check if the string is already set.
-		if ((void*)c2 == (void*)array)
-			return *this;
-
-		len = 0;
-		p = c2;
-		do
-		{
-			++len;
-		} while(*p++);
-
-		// we'll keep the old ustring16 for a while, because the new
-		// ustring16 could be a part of the current ustring16.
-		uchar16_t* oldArray = array;
-
-		used = len;
-		if (used>allocated)
-		{
-			allocated = used;
-			array = allocator.allocate(used); //new u16[used];
-		}
-
-		// Convert UTF-8 to UTF-16.
-		u32 pos = 0;
-		for (u32 l = 0; l<len;)
-		{
-			if (((c2[l] >> 6) & 0x03) == 0x02)
-			{	// Invalid continuation byte.
-				array[pos++] = unicode::UTF_REPLACEMENT_CHARACTER;
-				++l;
-			}
-			else if (c2[l] == 0xC0 || c2[l] == 0xC1)
-			{	// Invalid byte - overlong encoding.
-				array[pos++] = unicode::UTF_REPLACEMENT_CHARACTER;
-				++l;
-			}
-			else if ((c2[l] & 0xF8) == 0xF0)
-			{	// 4 bytes UTF-8, 2 bytes UTF-16.
-				// Check for a full string.
-				if ((l + 3) >= len)
-				{
-					array[pos++] = unicode::UTF_REPLACEMENT_CHARACTER;
-					l += 3;
-					break;
-				}
-
-				// Validate.
-				bool valid = true;
-				u8 l2 = 0;
-				if (valid && (((c2[l+1] >> 6) & 0x03) == 0x02)) ++l2; else valid = false;
-				if (valid && (((c2[l+2] >> 6) & 0x03) == 0x02)) ++l2; else valid = false;
-				if (valid && (((c2[l+3] >> 6) & 0x03) == 0x02)) ++l2; else valid = false;
-				if (!valid)
-				{
-					array[pos++] = unicode::UTF_REPLACEMENT_CHARACTER;
-					l += l2;
-					continue;
-				}
-
-				// Decode.
-				uchar8_t b1 = ((c2[l] & 0x7) << 2) | ((c2[l+1] >> 4) & 0x3);
-				uchar8_t b2 = ((c2[l+1] & 0xF) << 4) | ((c2[l+2] >> 2) & 0xF);
-				uchar8_t b3 = ((c2[l+2] & 0x3) << 6) | (c2[l+3] & 0x3F);
-				uchar32_t v = b3 | ((uchar32_t)b2 << 8) | ((uchar32_t)b1 << 16);
-
-				// Split v up into a surrogate pair.
-				uchar16_t x = static_cast<uchar16_t>(v);
-				uchar16_t vh = UTF16_HI_SURROGATE | ((((v >> 16) & ((1 << 5) - 1)) - 1) << 6) | (x >> 10);
-				uchar16_t vl = UTF16_LO_SURROGATE | (x & ((1 << 10) - 1));
-
-				array[pos++] = vh;
-				array[pos++] = vl;
-				l += 4;
-			}
-			else if ((c2[l] & 0xF0) == 0xE0)
-			{	// 3 bytes UTF-8, 1 byte UTF-16.
-				// Check for a full string.
-				if ((l + 2) >= len)
-				{
-					array[pos++] = unicode::UTF_REPLACEMENT_CHARACTER;
-					l += 2;
-					break;
-				}
-
-				// Validate.
-				bool valid = true;
-				u8 l2 = 0;
-				if (valid && (((c2[l+1] >> 6) & 0x03) == 0x02)) ++l2; else valid = false;
-				if (valid && (((c2[l+2] >> 6) & 0x03) == 0x02)) ++l2; else valid = false;
-				if (!valid)
-				{
-					array[pos++] = unicode::UTF_REPLACEMENT_CHARACTER;
-					l += l2;
-					continue;
-				}
-
-				// Decode.
-				uchar8_t b1 = ((c2[l] & 0xF) << 4) | ((c2[l+1] >> 2) & 0xF);
-				uchar8_t b2 = ((c2[l+1] & 0x3) << 6) | (c2[l+2] & 0x3F);
-				uchar16_t ch = b2 | ((uchar16_t)b1 << 8);
-				array[pos++] = ch;
-				l += 3;
-			}
-			else if ((c2[l] & 0xE0) == 0xC0)
-			{	// 2 bytes UTF-8, 1 byte UTF-16.
-				// Check for a full string.
-				if ((l + 1) >= len)
-				{
-					array[pos++] = unicode::UTF_REPLACEMENT_CHARACTER;
-					l += 1;
-					break;
-				}
-
-				// Validate.
-				if (((c2[l+1] >> 6) & 0x03) != 0x02)
-				{
-					array[pos++] = unicode::UTF_REPLACEMENT_CHARACTER;
-					++l;
-					continue;
-				}
-
-				// Decode.
-				uchar8_t b1 = (c2[l] >> 2) & 0x7;
-				uchar8_t b2 = ((c2[l] & 0x3) << 6) | (c2[l+1] & 0x3F);
-				uchar16_t ch = b2 | ((uchar16_t)b1 << 8);
-				array[pos++] = ch;
-				l += 2;
-			}
-			else
-			{	// 1 byte UTF-8, 1 byte UTF-16.
-				// Validate.
-				if (c2[l] > 0x7F)
-				{	// Values above 0xF4 are restricted and aren't used.  By now, anything above 0x7F is invalid.
-					array[pos++] = unicode::UTF_REPLACEMENT_CHARACTER;
-				}
-				else array[pos++] = static_cast<uchar16_t>(c2[l]);
-				++l;
-			}
-		}
-		used = pos;
-
-		if (oldArray != array)
-			allocator.deallocate(oldArray); // delete [] oldArray;
-
-		// Validate our new UTF-16 string.
-		validate();
-
+		//! Append our string now.
+		append(c);
 		return *this;
 	}
 
@@ -1159,65 +1088,17 @@ public:
 	//! Assignment operator for UTF-16 strings
 	ustring16<TAlloc>& operator=(const uchar16_t* const c)
 	{
-		if (!c)
+		if (!array)
 		{
-			if (!array)
-			{
-				array = allocator.allocate(1); //new u16[1];
-				allocated = 1;
-			}
-			used = 1;
-			array[0] = 0x0;
-			return *this;
+			array = allocator.allocate(1); //new u16[1];
+			allocated = 1;
 		}
+		used = 1;
+		array[0] = 0x0;
+		if (!c) return *this;
 
-		// Check for the BOM to determine the string's endianness.
-		unicode::EUTF_ENDIAN c_end = unicode::EUTFEE_NATIVE;
-		if (memcmp(c, unicode::BOM_ENCODE_UTF16_LE, unicode::BOM_ENCODE_UTF16_LEN) == 0)
-			c_end = unicode::EUTFEE_LITTLE;
-		else if (memcmp(c, unicode::BOM_ENCODE_UTF16_BE, unicode::BOM_ENCODE_UTF16_LEN) == 0)
-			c_end = unicode::EUTFEE_BIG;
-
-		// If a BOM was found, don't include it in the string.
-		const uchar16_t* c2 = c;
-		if (c_end != unicode::EUTFEE_NATIVE)
-			c2 = c + unicode::BOM_UTF16_LEN;
-
-		if ((void*)c2 == (void*)array)
-			return *this;
-
-		u32 len = 0;
-		const uchar16_t* p = c2;
-		do
-		{
-			++len;
-		} while(*p++);
-
-		// we'll keep the old ustring16 for a while, because the new
-		// ustring16 could be a part of the current ustring16.
-		uchar16_t* oldArray = array;
-
-		used = len;
-		if (used>allocated)
-		{
-			allocated = used;
-			array = allocator.allocate(used); //new u16[used];
-		}
-
-		unicode::EUTF_ENDIAN m_end = getEndianness();
-		for (u32 l = 0; l<len; ++l)
-		{
-			array[l] = (uchar16_t)c2[l];
-			if (c_end != unicode::EUTFEE_NATIVE && c_end != m_end)
-				array[l] = unicode::swapEndian16(array[l]);
-		}
-
-		if (oldArray != array)
-			allocator.deallocate(oldArray); // delete [] oldArray;
-
-		// Validate our new UTF-16 string.
-		validate();
-
+		//! Append our string now.
+		append(c);
 		return *this;
 	}
 
@@ -1225,84 +1106,17 @@ public:
 	//! Assignment operator for UTF-32 strings
 	ustring16<TAlloc>& operator=(const uchar32_t* const c)
 	{
-		if (!c)
+		if (!array)
 		{
-			if (!array)
-			{
-				array = allocator.allocate(1); //new u16[1];
-				allocated = 1;
-			}
-			used = 1;
-			array[0] = 0x0;
-			return *this;
+			array = allocator.allocate(1); //new u16[1];
+			allocated = 1;
 		}
+		used = 1;
+		array[0] = 0x0;
+		if (!c) return *this;
 
-		// Check for the BOM to determine the string's endianness.
-		unicode::EUTF_ENDIAN c_end = unicode::EUTFEE_NATIVE;
-		if (memcmp(c, unicode::BOM_ENCODE_UTF32_LE, unicode::BOM_ENCODE_UTF32_LEN) == 0)
-			c_end = unicode::EUTFEE_LITTLE;
-		else if (memcmp(c, unicode::BOM_ENCODE_UTF32_BE, unicode::BOM_ENCODE_UTF32_LEN) == 0)
-			c_end = unicode::EUTFEE_BIG;
-
-		// If a BOM was found, don't include it in the string.
-		const uchar32_t* c2 = c;
-		if (c_end != unicode::EUTFEE_NATIVE)
-			c2 = c + unicode::BOM_UTF32_LEN;
-
-		if ((void*)c2 == (void*)array)
-			return *this;
-
-		u32 len = 0;
-		const uchar32_t* p = c2;
-		do
-		{
-			++len;
-		} while(*p++);
-
-		// we'll keep the old ustring16 for a while, because the new
-		// ustring16 could be a part of the current ustring16.
-		uchar16_t* oldArray = array;
-
-		used = len * 2;		// In case all of the UTF-32 string is split into surrogate pairs.
-		if (used>allocated)
-		{
-			allocated = used;
-			array = allocator.allocate(used); //new u16[used];
-		}
-
-		// Convert UTF-32 to UTF-16.
-		unicode::EUTF_ENDIAN m_end = getEndianness();
-		u32 pos = 0;
-		for (u32 l = 0; l<len; ++l)
-		{
-			uchar32_t ch = c2[l];
-			if (c_end != unicode::EUTFEE_NATIVE && c_end != m_end)
-				ch = unicode::swapEndian32(ch);
-
-			if (ch > 0xFFFF)
-			{
-				// Split ch up into a surrogate pair as it is over 16 bits long.
-				uchar16_t x = static_cast<uchar16_t>(ch);
-				uchar16_t vh = UTF16_HI_SURROGATE | ((((ch >> 16) & ((1 << 5) - 1)) - 1) << 6) | (x >> 10);
-				uchar16_t vl = UTF16_LO_SURROGATE | (x & ((1 << 10) - 1));
-				array[pos++] = vh;
-				array[pos++] = vl;
-			}
-			else if (ch >= 0xD800 && ch <= 0xDFFF)
-			{
-				// Between possible UTF-16 surrogates (invalid!)
-				array[pos++] = unicode::UTF_REPLACEMENT_CHARACTER;
-			}
-			else array[pos++] = static_cast<uchar16_t>(ch);
-		}
-		used = pos;
-
-		if (oldArray != array)
-			allocator.deallocate(oldArray); // delete [] oldArray;
-
-		// Validate our new UTF-16 string.
-		validate();
-
+		//! Append our string now.
+		append(c);
 		return *this;
 	}
 
@@ -1427,6 +1241,14 @@ public:
 	}
 
 
+	//! Informs if the ustring is empty or not.
+	//! \return True if the ustring is empty, false if not.
+	bool empty() const
+	{
+		return (size_raw() == 0);
+	}
+
+
 	//! Returns a pointer to the raw UTF-16 string data.
 	/** \return pointer to C-style NUL terminated array of UTF-16 code points. */
 	const uchar16_t* c_str() const
@@ -1501,34 +1323,316 @@ public:
 	}
 
 
+	//! Appends a UTF-8 string to this ustring16
+	/** \param other: The UTF-8 string to append. */
+	/** \param length: The length of the string to append. */
+	ustring16<TAlloc>& append(const uchar8_t* const other, u32 length=0xffffffff)
+	{
+		if (!other)
+			return *this;
+
+		// Determine if the string is long enough for a BOM.
+		u32 len = 0;
+		const uchar8_t* p = other;
+		do
+		{
+			++len;
+		} while (*p++ && len < unicode::BOM_ENCODE_UTF8_LEN);
+
+		// Check for BOM.
+		unicode::EUTF_ENCODE c_bom = unicode::EUTFE_NONE;
+		if (len == unicode::BOM_ENCODE_UTF8_LEN)
+		{
+			if (memcmp(other, unicode::BOM_ENCODE_UTF8, unicode::BOM_ENCODE_UTF8_LEN) == 0)
+				c_bom = unicode::EUTFE_UTF8;
+		}
+
+		// If a BOM was found, don't include it in the string.
+		const uchar8_t* c2 = other;
+		if (c_bom != unicode::EUTFE_NONE)
+		{
+			c2 = other + unicode::BOM_UTF8_LEN;
+			length -= unicode::BOM_UTF8_LEN;
+		}
+
+		// Calculate the size of the string to read in.
+		len = 0;
+		p = c2;
+		do
+		{
+			++len;
+		} while(*p++ && len < length);
+		if (len > length)
+			len = length;
+
+		// If we need to grow the array, do it now.
+		if (used == 0) used = 1;
+		if (used + len > allocated)
+			reallocate(used + (len * 2));
+		u32 start = used - 1;
+		used += len;
+
+		// Convert UTF-8 to UTF-16.
+		u32 pos = start;
+		for (u32 l = 0; l<len;)
+		{
+			if (((c2[l] >> 6) & 0x03) == 0x02)
+			{	// Invalid continuation byte.
+				array[pos++] = unicode::UTF_REPLACEMENT_CHARACTER;
+				++l;
+			}
+			else if (c2[l] == 0xC0 || c2[l] == 0xC1)
+			{	// Invalid byte - overlong encoding.
+				array[pos++] = unicode::UTF_REPLACEMENT_CHARACTER;
+				++l;
+			}
+			else if ((c2[l] & 0xF8) == 0xF0)
+			{	// 4 bytes UTF-8, 2 bytes UTF-16.
+				// Check for a full string.
+				if ((l + 3) >= len)
+				{
+					array[pos++] = unicode::UTF_REPLACEMENT_CHARACTER;
+					l += 3;
+					break;
+				}
+
+				// Validate.
+				bool valid = true;
+				u8 l2 = 0;
+				if (valid && (((c2[l+1] >> 6) & 0x03) == 0x02)) ++l2; else valid = false;
+				if (valid && (((c2[l+2] >> 6) & 0x03) == 0x02)) ++l2; else valid = false;
+				if (valid && (((c2[l+3] >> 6) & 0x03) == 0x02)) ++l2; else valid = false;
+				if (!valid)
+				{
+					array[pos++] = unicode::UTF_REPLACEMENT_CHARACTER;
+					l += l2;
+					continue;
+				}
+
+				// Decode.
+				uchar8_t b1 = ((c2[l] & 0x7) << 2) | ((c2[l+1] >> 4) & 0x3);
+				uchar8_t b2 = ((c2[l+1] & 0xF) << 4) | ((c2[l+2] >> 2) & 0xF);
+				uchar8_t b3 = ((c2[l+2] & 0x3) << 6) | (c2[l+3] & 0x3F);
+				uchar32_t v = b3 | ((uchar32_t)b2 << 8) | ((uchar32_t)b1 << 16);
+
+				// Split v up into a surrogate pair.
+				uchar16_t x = static_cast<uchar16_t>(v);
+				uchar16_t vh = UTF16_HI_SURROGATE | ((((v >> 16) & ((1 << 5) - 1)) - 1) << 6) | (x >> 10);
+				uchar16_t vl = UTF16_LO_SURROGATE | (x & ((1 << 10) - 1));
+
+				array[pos++] = vh;
+				array[pos++] = vl;
+				l += 4;
+			}
+			else if ((c2[l] & 0xF0) == 0xE0)
+			{	// 3 bytes UTF-8, 1 byte UTF-16.
+				// Check for a full string.
+				if ((l + 2) >= len)
+				{
+					array[pos++] = unicode::UTF_REPLACEMENT_CHARACTER;
+					l += 2;
+					break;
+				}
+
+				// Validate.
+				bool valid = true;
+				u8 l2 = 0;
+				if (valid && (((c2[l+1] >> 6) & 0x03) == 0x02)) ++l2; else valid = false;
+				if (valid && (((c2[l+2] >> 6) & 0x03) == 0x02)) ++l2; else valid = false;
+				if (!valid)
+				{
+					array[pos++] = unicode::UTF_REPLACEMENT_CHARACTER;
+					l += l2;
+					continue;
+				}
+
+				// Decode.
+				uchar8_t b1 = ((c2[l] & 0xF) << 4) | ((c2[l+1] >> 2) & 0xF);
+				uchar8_t b2 = ((c2[l+1] & 0x3) << 6) | (c2[l+2] & 0x3F);
+				uchar16_t ch = b2 | ((uchar16_t)b1 << 8);
+				array[pos++] = ch;
+				l += 3;
+			}
+			else if ((c2[l] & 0xE0) == 0xC0)
+			{	// 2 bytes UTF-8, 1 byte UTF-16.
+				// Check for a full string.
+				if ((l + 1) >= len)
+				{
+					array[pos++] = unicode::UTF_REPLACEMENT_CHARACTER;
+					l += 1;
+					break;
+				}
+
+				// Validate.
+				if (((c2[l+1] >> 6) & 0x03) != 0x02)
+				{
+					array[pos++] = unicode::UTF_REPLACEMENT_CHARACTER;
+					++l;
+					continue;
+				}
+
+				// Decode.
+				uchar8_t b1 = (c2[l] >> 2) & 0x7;
+				uchar8_t b2 = ((c2[l] & 0x3) << 6) | (c2[l+1] & 0x3F);
+				uchar16_t ch = b2 | ((uchar16_t)b1 << 8);
+				array[pos++] = ch;
+				l += 2;
+			}
+			else
+			{	// 1 byte UTF-8, 1 byte UTF-16.
+				// Validate.
+				if (c2[l] > 0x7F)
+				{	// Values above 0xF4 are restricted and aren't used.  By now, anything above 0x7F is invalid.
+					array[pos++] = unicode::UTF_REPLACEMENT_CHARACTER;
+				}
+				else array[pos++] = static_cast<uchar16_t>(c2[l]);
+				++l;
+			}
+		}
+		array[used - 1] = 0;
+
+		// Validate our new UTF-16 string.
+		validate();
+
+		return *this;
+	}
+
+
 	//! Appends a UTF-16 string to this ustring16
-	/** \param other: Char ustring16 to append. */
+	/** \param other: The UTF-16 string to append. */
 	/** \param length: The length of the string to append. */
 	ustring16<TAlloc>& append(const uchar16_t* const other, u32 length=0xffffffff)
 	{
 		if (!other)
-			return;
+			return *this;
 
+		// Determine if the string is long enough for a BOM.
 		u32 len = 0;
 		const uchar16_t* p = other;
-		while(*p)
+		do
 		{
 			++len;
-			++p;
+		} while (*p++ && len < unicode::BOM_ENCODE_UTF16_LEN);
+
+		// Check for the BOM to determine the string's endianness.
+		unicode::EUTF_ENDIAN c_end = unicode::EUTFEE_NATIVE;
+		if (memcmp(other, unicode::BOM_ENCODE_UTF16_LE, unicode::BOM_ENCODE_UTF16_LEN) == 0)
+			c_end = unicode::EUTFEE_LITTLE;
+		else if (memcmp(other, unicode::BOM_ENCODE_UTF16_BE, unicode::BOM_ENCODE_UTF16_LEN) == 0)
+			c_end = unicode::EUTFEE_BIG;
+
+		// If a BOM was found, don't include it in the string.
+		const uchar16_t* c2 = other;
+		if (c_end != unicode::EUTFEE_NATIVE)
+		{
+			c2 = other + unicode::BOM_UTF16_LEN;
+			length -= unicode::BOM_UTF16_LEN;
 		}
+
+		// Calculate the size of the string to read in.
+		len = 0;
+		p = c2;
+		do
+		{
+			++len;
+		} while(*p++ && len < length);
 		if (len > length)
 			len = length;
 
+		// If we need to grow the size of the array, do it now.
+		if (used == 0) used = 1;
 		if (used + len > allocated)
-			reallocate(used + len);
-
-		--used;
-		++len;
-
-		for (u32 l=0; l<len; ++l)
-			array[l+used] = *(other+l);
-
+			reallocate(used + (len * 2));
+		u32 start = used - 1;
 		used += len;
+
+		// Copy the string now.
+		unicode::EUTF_ENDIAN m_end = getEndianness();
+		for (u32 l = start; l < start + len; ++l)
+		{
+			array[l] = (uchar16_t)c2[l];
+			if (c_end != unicode::EUTFEE_NATIVE && c_end != m_end)
+				array[l] = unicode::swapEndian16(array[l]);
+		}
+
+		array[used - 1] = 0;
+
+		// Validate our new UTF-16 string.
+		validate();
+		return *this;
+	}
+
+
+	//! Appends a UTF-32 string to this ustring16
+	/** \param other: UTF-32 string to append. */
+	/** \param length: The length of the string to append. */
+	ustring16<TAlloc>& append(const uchar32_t* const other, u32 length=0xffffffff)
+	{
+		if (!other)
+			return *this;
+
+		// Check for the BOM to determine the string's endianness.
+		unicode::EUTF_ENDIAN c_end = unicode::EUTFEE_NATIVE;
+		if (memcmp(other, unicode::BOM_ENCODE_UTF32_LE, unicode::BOM_ENCODE_UTF32_LEN) == 0)
+			c_end = unicode::EUTFEE_LITTLE;
+		else if (memcmp(other, unicode::BOM_ENCODE_UTF32_BE, unicode::BOM_ENCODE_UTF32_LEN) == 0)
+			c_end = unicode::EUTFEE_BIG;
+
+		// If a BOM was found, don't include it in the string.
+		const uchar32_t* c2 = other;
+		if (c_end != unicode::EUTFEE_NATIVE)
+		{
+			c2 = other + unicode::BOM_UTF32_LEN;
+			length -= unicode::BOM_UTF32_LEN;
+		}
+
+		// Calculate the size of the string to read in.
+		u32 len = 0;
+		const uchar32_t* p = c2;
+		do
+		{
+			++len;
+		} while(*p++ && len < length);
+		if (len > length)
+			len = length;
+
+		// If we need to grow the size of the array, do it now.
+		// In case all of the UTF-32 string is split into surrogate pairs, do len * 2.
+		if (used == 0) used = 1;
+		if (used + (len * 2) > allocated)
+			reallocate(used + ((len * 2) * 2));
+		u32 start = used - 1;
+		used += len;
+
+		// Convert UTF-32 to UTF-16.
+		unicode::EUTF_ENDIAN m_end = getEndianness();
+		u32 pos = start;
+		for (u32 l = 0; l<len; ++l)
+		{
+			uchar32_t ch = c2[l];
+			if (c_end != unicode::EUTFEE_NATIVE && c_end != m_end)
+				ch = unicode::swapEndian32(ch);
+
+			if (ch > 0xFFFF)
+			{
+				// Split ch up into a surrogate pair as it is over 16 bits long.
+				uchar16_t x = static_cast<uchar16_t>(ch);
+				uchar16_t vh = UTF16_HI_SURROGATE | ((((ch >> 16) & ((1 << 5) - 1)) - 1) << 6) | (x >> 10);
+				uchar16_t vl = UTF16_LO_SURROGATE | (x & ((1 << 10) - 1));
+				array[pos++] = vh;
+				array[pos++] = vl;
+			}
+			else if (ch >= 0xD800 && ch <= 0xDFFF)
+			{
+				// Between possible UTF-16 surrogates (invalid!)
+				array[pos++] = unicode::UTF_REPLACEMENT_CHARACTER;
+			}
+			else array[pos++] = static_cast<uchar16_t>(ch);
+		}
+		array[used - 1] = 0;
+
+		// Validate our new UTF-16 string.
+		validate();
 
 		return *this;
 	}
@@ -1566,7 +1670,7 @@ public:
 		if (other.size() < length)
 		{
 			append(other);
-			return;
+			return *this;
 		}
 
 		if (used + length * 2 > allocated)
@@ -1694,6 +1798,7 @@ public:
 			return -1;
 
 		const_iterator i(end());
+		--i;
 
 		s32 pos = size() - 1;
 		while (!i.atStart())
@@ -1773,6 +1878,8 @@ public:
 			return -1;
 
 		const_iterator i(end());
+		--i;
+
 		s32 pos = size();
 		while (!i.atStart())
 		{
@@ -1821,6 +1928,40 @@ public:
 			}
 			++i;
 			++pos;
+		}
+
+		return -1;
+	}
+
+
+	//! Finds another ustring16 in this ustring16.
+	/** \param str: Another ustring16
+	\param start: Start position of the search
+	\return Positions where the ustring16 has been found,
+	or -1 if not found. */
+	s32 find_raw(const ustring16<TAlloc>& str, const u32 start = 0) const
+	{
+		const uchar16_t* data = str.c_str();
+		if (data && *data)
+		{
+			u32 len = 0;
+
+			while (data[len])
+				++len;
+
+			if (len > used-1)
+				return -1;
+
+			for (u32 i=start; i<used-len; ++i)
+			{
+				u32 j=0;
+
+				while(data[j] && array[i+j] == data[j])
+					++j;
+
+				if (!data[j])
+					return i;
+			}
 		}
 
 		return -1;
@@ -1900,6 +2041,121 @@ public:
 	}
 
 
+	//! Replaces all instances of a string with another one.
+	/** \param toReplace The string to replace.
+	\param replaceWith The string replacing the old one. */
+	ustring16<TAlloc>& replace(const ustring16<TAlloc>& toReplace, const ustring16<TAlloc>& replaceWith)
+	{
+		if (toReplace.size() == 0)
+			return *this;
+
+		const uchar16_t* other = toReplace.c_str();
+		const uchar16_t* replace = replaceWith.c_str();
+		const u32 other_size = toReplace.size_raw();
+		const u32 replace_size = replaceWith.size_raw();
+
+		// Determine the delta.  The algorithm will change depending on the delta.
+		s32 delta = replace_size - other_size;
+
+		// A character for character replace.  The string will not shrink or grow.
+		if (delta == 0)
+		{
+			s32 pos = 0;
+			while ((pos = find_raw(other, pos)) != -1)
+			{
+				for (u32 i = 0; i < replace_size; ++i)
+					array[pos + i] = replace[i];
+				++pos;
+			}
+			return *this;
+		}
+
+		// We are going to be removing some characters.  The string will shrink.
+		if (delta < 0)
+		{
+			u32 i = 0;
+			for (u32 pos = 0; pos < used; ++i, ++pos)
+			{
+				// Is this potentially a match?
+				if (array[pos] == *other)
+				{
+					// Check to see if we have a match.
+					u32 j;
+					for (j = 0; j < other_size; ++j)
+					{
+						if (array[pos + j] != other[j])
+							break;
+					}
+
+					// If we have a match, replace characters.
+					if (j == other_size)
+					{
+						for (j = 0; j < replace_size; ++j)
+							array[i + j] = replace[j];
+						i += replace_size - 1;
+						pos += other_size - 1;
+						continue;
+					}
+				}
+
+				// No match found, just copy characters.
+				array[i] = array[pos];
+			}
+			array[i - 1] = 0;
+			used = i;
+
+			return *this;
+		}
+
+		// We are going to be adding characters, so the string size will increase.
+		// Count the number of times toReplace exists in the string so we can allocate the new size.
+		u32 find_count = 0;
+		s32 pos = 0;
+		while ((pos = find_raw(other, pos)) != -1)
+		{
+			++find_count;
+			++pos;
+		}
+
+		// Re-allocate the string now, if needed.
+		u32 len = delta * find_count;
+		if (used + len > allocated)
+			reallocate(used + len);
+
+		// Don't take the string terminator into account.
+		--used;
+
+		// Start replacing.
+		pos = 0;
+		while ((pos = find_raw(other, pos)) != -1)
+		{
+			uchar16_t* start = array + pos + other_size - 1;
+			uchar16_t* ptr   = array + used;
+			uchar16_t* end   = array + used + delta;
+
+			// Shift characters to make room for the string.
+			while (ptr != start)
+			{
+				*end = *ptr;
+				--ptr;
+				--end;
+			}
+
+			// Add the new string now.
+			for (u32 i = 0; i < replace_size; ++i)
+				array[pos + i] = replace[i];
+
+			pos += replace_size;
+			used += delta;
+		}
+
+		// Terminate the string and return ourself.
+		array[used] = 0;
+		++used;
+		return *this;
+	}
+
+
 	//! Removes characters from a ustring16..
 	/** \param c: Character to remove. */
 	ustring16<TAlloc>& remove(uchar32_t c)
@@ -1930,7 +2186,7 @@ public:
 				array[pos++] = array[++i];
 		}
 		used -= found;
-		array[used] = 0;
+		array[used-1] = 0;
 		return *this;
 	}
 
@@ -1964,7 +2220,7 @@ public:
 			array[pos++] = array[i];
 		}
 		used -= found;
-		array[used] = 0;
+		array[used-1] = 0;
 		return *this;
 	}
 
@@ -2012,7 +2268,7 @@ public:
 				array[pos++] = array[++i];
 		}
 		used -= found;
-		array[used] = 0;
+		array[used-1] = 0;
 		return *this;
 	}
 
@@ -2084,8 +2340,8 @@ public:
 		used = 0;
 		if ( allocated > 0 )
 		{
-			used = allocated - 1;
-			array[used] = 0;
+			used = allocated;
+			array[used-1] = 0;
 		}
 		return *this;
 	}
@@ -2157,7 +2413,7 @@ public:
 				{
 					if ((!ignoreEmptyTokens || pos - lastpos != 0) &&
 							!lastWasSeparator)
-						ret.push_back(ustring16<TAlloc>(&array[lastpospos], pos - lastpos));
+					ret.push_back(ustring16<TAlloc>(&array[lastpospos], pos - lastpos));
 					foundSeparator = true;
 					lastpos = (keepSeparators ? pos : pos + 1);
 					lastpospos = (keepSeparators ? i.getPos() : i.getPos() + 1);
@@ -2717,16 +2973,49 @@ public:
 		return core::array<wchar_t>();
 	}
 
+	//! Loads an unknown stream of data.
+	//! Will attempt to determine if the stream is unicode data.  Useful for loading from files.
+	ustring16<TAlloc>& loadDataStream(const char* data, size_t data_size)
+	{
+		// Clear our string.
+		*this = "";
+		if (!data)
+			return *this;
+
+		unicode::EUTF_ENCODE e = unicode::determineUnicodeBOM(data);
+		switch (e)
+		{
+			default:
+			case unicode::EUTFE_UTF8:
+				append((uchar8_t*)data, data_size);
+				break;
+
+			case unicode::EUTFE_UTF16:
+			case unicode::EUTFE_UTF16_BE:
+			case unicode::EUTFE_UTF16_LE:
+				append((uchar16_t*)data, data_size / 2);
+				break;
+
+			case unicode::EUTFE_UTF32:
+			case unicode::EUTFE_UTF32_BE:
+			case unicode::EUTFE_UTF32_LE:
+				append((uchar32_t*)data, data_size / 4);
+				break;
+		}
+
+		return *this;
+	}
+
 	//! Gets the encoding of the Unicode string this class contains.
 	//! \return An enum describing the current encoding of this string.
-	unicode::EUTF_ENCODE getEncoding() const
+	const unicode::EUTF_ENCODE getEncoding() const
 	{
 		return encoding;
 	}
 
 	//! Gets the endianness of the Unicode string this class contains.
 	//! \return An enum describing the endianness of this string.
-	unicode::EUTF_ENDIAN getEndianness() const
+	const unicode::EUTF_ENDIAN getEndianness() const
 	{
 		if (encoding == unicode::EUTFE_UTF16_LE ||
 			encoding == unicode::EUTFE_UTF32_LE)
@@ -2743,6 +3032,7 @@ private:
 
 		array = allocator.allocate(new_size); //new u16[new_size];
 		allocated = new_size;
+		if (old_array == 0) return;
 
 		u32 amount = used < new_size ? used : new_size;
 		for (u32 i=0; i<amount; ++i)
