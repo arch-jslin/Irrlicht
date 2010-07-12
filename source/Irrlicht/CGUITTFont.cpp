@@ -836,6 +836,16 @@ core::array<scene::ISceneNode*> CGUITTFont::addTextSceneNode
     using namespace scene;
 
     array<scene::ISceneNode*> container;
+
+    //NOTE:
+    //In the drawing loop, first we get the glyph index, and we get glyph source rect
+    //and the glyph page information. and then we have page texture dimension,
+    //using the texture dimension and source rect, we can transform this data into
+    //texture UV coordinates.
+    //then we call update_glyph_pages() so the ITexture object in the GlyphPage is
+    //updated accordingly. finally we can adjust all those vertices' UV positions so
+    //they'll show up correctly. this should be quite easy to do.
+
 /*
     if( !smgr ) return container;
     if( !parent )
