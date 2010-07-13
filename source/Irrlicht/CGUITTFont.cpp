@@ -836,6 +836,16 @@ void CGUITTFont::createSharedPlane()
     buf->drop(); //the addMeshBuffer method will grab it, so we can drop this ptr.
 }
 
+core::dimension2d<u32>
+CGUITTFont::getDimensionUntilEndOfLine(const wchar_t* p) const
+{
+    core::stringw s;
+    for(const wchar_t* temp = p; temp && *temp != '\0' && *temp != L'\r' && *temp != L'\n'; ++temp )
+        s.append(*temp);
+
+    return getDimension(s.c_str());
+}
+
 core::array<scene::ISceneNode*> CGUITTFont::addTextSceneNode
     (const wchar_t* text, scene::ISceneManager* smgr, scene::ISceneNode* parent, const video::SColor& color, bool center)
 {
@@ -865,10 +875,7 @@ core::array<scene::ISceneNode*> CGUITTFont::addTextSceneNode
     if( center ) {
         offset.X = start_point.X = -text_size.Width / 2.f;
         offset.Y = start_point.Y = +text_size.Height/ 2.f;
-        core::stringw s;
-        for(const wchar_t* temp = text; temp && *temp != '\0' && *temp != L'\r' && *temp != L'\n'; ++temp )
-            s.append(*temp); //collect the next line to estimate the width
-        offset.X += ( text_size.Width - getDimension(s.c_str()).Width ) >> 1;
+        offset.X += ( text_size.Width - getDimensionUntilEndOfLine(text).Width ) >> 1;
     }
 
     //the default font material
@@ -903,10 +910,7 @@ core::array<scene::ISceneNode*> CGUITTFont::addTextSceneNode
             offset.Y -= tt_face->size->metrics.ascender / 64;
             offset.X =  start_point.X;
             if (center) {
-                core::stringw s;
-                for(const wchar_t* temp = text+1; temp && *temp != '\0' && *temp != L'\r' && *temp != L'\n'; ++temp )
-                    s.append(*temp); //collect the next line to estimate the width
-                offset.X += ( text_size.Width - getDimension(s.c_str()).Width ) >> 1;
+                offset.X += ( text_size.Width - getDimensionUntilEndOfLine(text+1).Width ) >> 1;
             }
             ++text;
         }
@@ -914,14 +918,6 @@ core::array<scene::ISceneNode*> CGUITTFont::addTextSceneNode
             n = getGlyphIndexByChar(current_char);
             if( n > 0 ) {
                 glyph_indices.push_back( n );
-                //NOTE:
-                //In the drawing loop, first we get the glyph index, and we get glyph source rect
-                //and the glyph page information. and then we have page texture dimension,
-                //using the texture dimension and source rect, we can transform this data into
-                //texture UV coordinates.
-                //then we call update_glyph_pages() so the ITexture object in the GlyphPage is
-                //updated accordingly. finally we can adjust all those vertices' UV positions so
-                //they'll show up correctly. this should be quite easy to do.
 
                 // Store glyph size and offset informations.
                 SGUITTGlyph const& glyph = Glyphs[n-1];
