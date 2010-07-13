@@ -1486,8 +1486,7 @@ IGUIFont* CGUIEnvironment::getFont(const io::path& filename)
 // >> IrrlichtML modification 2010.06.29
 #if defined(_IRR_COMPILE_WITH_CGUITTFONT_)
 //! returns the font
-IGUITTFont* CGUIEnvironment::getFont(const io::path& filename, u32 fontsize, bool size_in_pixel,
-                                     bool antialias, bool transparency)
+IGUITTFont* CGUIEnvironment::getFont(const io::path& filename, u32 fontsize, bool antialias, bool transparency)
 {
 	// search existing font
 

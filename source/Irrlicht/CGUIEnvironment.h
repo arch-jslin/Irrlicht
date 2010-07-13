@@ -79,8 +79,7 @@ public:
 // >> IrrlichtML modification 2010.06.28 (modified again by arch_jslin)
 #if defined(_IRR_COMPILE_WITH_CGUITTFONT_)
 	//! Returns pointer to the font with the specified filename.
-	virtual IGUITTFont* getFont(const io::path& filename, u32 fontsize, bool size_in_pixel = false,
-                                bool antialias = true, bool transparency = true);
+	virtual IGUITTFont* getFont(const io::path& filename, u32 fontsize, bool antialias = true, bool transparency = true);
 #endif
 // <<
 	//! add an externally loaded font

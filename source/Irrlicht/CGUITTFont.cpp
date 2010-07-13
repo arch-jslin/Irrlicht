@@ -424,9 +424,9 @@ void CGUITTFont::draw(const core::stringw& text, const core::rect<s32>& position
 	// Set up some variables.
 	core::dimension2d<s32> textDimension;
 	core::position2d<s32> offset = position.UpperLeftCorner;
-	video::SColor colors[4];
-	for (u32 i = 0; i < 4; i++)
-		colors[i] = color;
+//	video::SColor colors[4];
+//	for (u32 i = 0; i < 4; i++)  // not actually used, commented out by arch.jslin 2010.07.12
+//		colors[i] = color;
 
 	// Determine offset positions.
 	if (hcenter || vcenter)
@@ -805,6 +805,14 @@ video::ITexture* CGUITTFont::getTextureFromChar(const wchar_t ch) const
 
 void CGUITTFont::createSharedPlane()
 {
+    /*
+        2___3
+        |  /|
+        | / |    <-- plane mesh is like this, point 2 is (0,0), point 0 is (0, -1)
+        |/  |    <-- the texture coords of point 2 is (0,0, point 0 is (0, 1)
+        0---1
+    */
+
     using namespace core;
     using namespace video;
     using namespace scene;
@@ -837,17 +845,7 @@ core::array<scene::ISceneNode*> CGUITTFont::addTextSceneNode
 
     array<scene::ISceneNode*> container;
 
-    //NOTE:
-    //In the drawing loop, first we get the glyph index, and we get glyph source rect
-    //and the glyph page information. and then we have page texture dimension,
-    //using the texture dimension and source rect, we can transform this data into
-    //texture UV coordinates.
-    //then we call update_glyph_pages() so the ITexture object in the GlyphPage is
-    //updated accordingly. finally we can adjust all those vertices' UV positions so
-    //they'll show up correctly. this should be quite easy to do.
-
-/*
-    if( !smgr ) return container;
+    if( !Driver || !smgr ) return container;
     if( !parent )
         parent = smgr->addEmptySceneNode(smgr->getRootSceneNode(), -1);
     //if you don't specify parent, then we add a empty node attached to the root node
@@ -862,7 +860,8 @@ core::array<scene::ISceneNode*> CGUITTFont::addTextSceneNode
     /** NOTICE:
         Because we are considering adding texts into 3D world, all Y axis vectors are inverted.
     **/
-/*
+
+    //There's currently no "vertical center" concept when you apply text scene node to the 3D world.
     if( center ) {
         offset.X = start_point.X = -text_size.Width / 2.f;
         offset.Y = start_point.Y = +text_size.Height/ 2.f;
@@ -884,6 +883,8 @@ core::array<scene::ISceneNode*> CGUITTFont::addTextSceneNode
 
     wchar_t current_char = 0, previous_char = 0;
     u32 n = 0;
+
+    array<u32> glyph_indices;
 
     while( *text ) {
         current_char = *text;
@@ -912,37 +913,39 @@ core::array<scene::ISceneNode*> CGUITTFont::addTextSceneNode
         else {
             n = getGlyphIndexByChar(current_char);
             if( n > 0 ) {
-                // Store some useful information.
+                glyph_indices.push_back( n );
+                //NOTE:
+                //In the drawing loop, first we get the glyph index, and we get glyph source rect
+                //and the glyph page information. and then we have page texture dimension,
+                //using the texture dimension and source rect, we can transform this data into
+                //texture UV coordinates.
+                //then we call update_glyph_pages() so the ITexture object in the GlyphPage is
+                //updated accordingly. finally we can adjust all those vertices' UV positions so
+                //they'll show up correctly. this should be quite easy to do.
+
+                // Store glyph size and offset informations.
                 SGUITTGlyph const& glyph = Glyphs[n-1];
-                u32 texw = glyph.texture_size.Width;
-                u32 texh = glyph.texture_size.Height;
-                s32 offx = glyph.bitmap_size.UpperLeftCorner.X;
-                s32 offy = (tt_face->size->metrics.ascender / 64) - glyph.bitmap_size.UpperLeftCorner.Y;
+                u32 texw = glyph.source_rect.getWidth();
+                u32 texh = glyph.source_rect.getHeight();
+                s32 offx = glyph.offset.X;
+                s32 offy = (font_metrics.ascender / 64) - glyph.offset.Y;
 
                 // Apply kerning.
                 vector2di k = getKerning(current_char, previous_char);
                 offset.X += k.X;
                 offset.Y += k.Y;
 
-                ITexture*        current_tex = glyph.texture;
                 vector3df        current_pos(offset.X + offx, offset.Y - offy, 0);
-                dimension2d<u32> letter_size = dimension2d<u32>( texw-1, texh-1 );
+                dimension2d<u32> letter_size = dimension2d<u32>( texw, texh );
 
                 //Now we copy planes corresponding to the letter size
                 IMeshManipulator* mani = smgr->getMeshManipulator();
                 IMesh* meshcopy = mani->createMeshCopy( shared_plane_ptr_ );
                 mani->scaleMesh( meshcopy, vector3df(letter_size.Width, letter_size.Height, 1) );
 
-                //Because I got very strange texture artifacts (looks like texture wrapped around the mesh)
-                //So I have to adjust uv coordinates accordingly.
-                S3DVertex* pv = static_cast<S3DVertex*>(meshcopy->getMeshBuffer(0)->getVertices());
-                pv[0].TCoords.Y = pv[1].TCoords.Y = (letter_size.Height - 1) / static_cast<f32>(letter_size.Height);
-                pv[1].TCoords.X = pv[3].TCoords.X = (letter_size.Width - 1)  / static_cast<f32>(letter_size.Width);
-
                 ISceneNode* current_node = smgr->addMeshSceneNode( meshcopy, parent, -1, current_pos );
                 meshcopy->drop();
 
-                mat.setTexture(0, current_tex);
                 current_node->getMaterial(0) = mat;
                 current_node->setAutomaticCulling(EAC_OFF);
                 current_node->setIsDebugObject(true);  //so the picking won't have any effect on individual letter
@@ -956,7 +959,42 @@ core::array<scene::ISceneNode*> CGUITTFont::addTextSceneNode
         }
     }
 
-    return container; */
+    update_glyph_pages();
+    //only after we update the textures can we use the glyph page textures.
+
+    for( u32 i = 0; i < glyph_indices.size(); ++i ) {
+        u32 n = glyph_indices[i];
+        SGUITTGlyph const& glyph = Glyphs[n-1];
+        ITexture* current_tex = Glyph_Pages[glyph.glyph_page]->texture;
+        f32 page_texture_size = current_tex->getSize().Width;
+        //Now we calculate the UV position according to the texture size and the source rect.
+        //
+        //  2___3
+        //  |  /|
+        //  | / |    <-- plane mesh is like this, point 2 is (0,0), point 0 is (0, -1)
+        //  |/  |    <-- the texture coords of point 2 is (0,0, point 0 is (0, 1)
+        //  0---1
+        //
+        f32 u1 = glyph.source_rect.UpperLeftCorner.X / page_texture_size;
+        f32 u2 = u1 + (glyph.source_rect.getWidth()  / page_texture_size);
+        f32 v1 = glyph.source_rect.UpperLeftCorner.Y / page_texture_size;
+        f32 v2 = v1 + (glyph.source_rect.getHeight() / page_texture_size);
+
+        //we can be quite sure that this is IMeshSceneNode, because we just added them in the above loop.
+        IMeshSceneNode* node = static_cast<IMeshSceneNode*>(container[i]);
+
+        S3DVertex* pv = static_cast<S3DVertex*>(node->getMesh()->getMeshBuffer(0)->getVertices());
+        //pv[0].TCoords.Y = pv[1].TCoords.Y = (letter_size.Height - 1) / static_cast<f32>(letter_size.Height);
+        //pv[1].TCoords.X = pv[3].TCoords.X = (letter_size.Width - 1)  / static_cast<f32>(letter_size.Width);
+        pv[0].TCoords = vector2df(u1, v2);
+        pv[1].TCoords = vector2df(u2, v2);
+        pv[2].TCoords = vector2df(u1, v1);
+        pv[3].TCoords = vector2df(u2, v1);
+
+        container[i]->getMaterial(0).setTexture(0, current_tex);
+    }
+
+    return container;
 }
 // <<
 
