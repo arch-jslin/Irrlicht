@@ -127,6 +127,10 @@ struct SGUITTGlyph
 
     // Glyph advance information.
     FT_Vector advance;
+
+private:
+// >> refactored by arch.jslin 2010.07.20
+    video::IImage* createGlyphImage(const FT_Bitmap& bits, video::IVideoDriver* driver);
 };
 
 //! Class representing a TrueType font.

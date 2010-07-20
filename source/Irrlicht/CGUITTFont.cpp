@@ -28,36 +28,9 @@ bool                             CGUITTFont::c_libraryLoaded = false;
 scene::IMesh*                    CGUITTFont::shared_plane_ptr_ = 0;
 scene::SMesh                     CGUITTFont::shared_plane_;
 
-void SGUITTGlyph::load(u32 character, FT_Face face, video::IVideoDriver* driver, u32 size,
-                       core::dimension2du max_texture_size, core::array<CGUITTGlyphPage*>* Glyph_Pages, bool fontHinting,
-                       bool autoHinting, bool useMonochrome)
+// >> refactored by arch.jslin 2010.07.20
+video::IImage* SGUITTGlyph::createGlyphImage(const FT_Bitmap& bits, video::IVideoDriver* driver)
 {
-	if (isLoaded) return;
-
-	// Set the size of the glyph.
-	FT_Set_Pixel_Sizes(face, 0, size);
-
-	// Set up our loading flags.
-	FT_Int32 loadFlags = FT_LOAD_DEFAULT | FT_LOAD_RENDER;
-	if (!fontHinting) loadFlags |= FT_LOAD_NO_HINTING;
-	if (!autoHinting) loadFlags |= FT_LOAD_NO_AUTOHINT;
-	if (useMonochrome) loadFlags |= FT_LOAD_MONOCHROME | FT_LOAD_TARGET_MONO | FT_RENDER_MODE_MONO;
-	else loadFlags |= FT_LOAD_TARGET_NORMAL;
-
-	// Attempt to load the glyph.
-	if (FT_Load_Glyph(face, character, loadFlags) != FT_Err_Ok)
-		// TODO: error message?
-		return;
-
-	FT_GlyphSlot glyph = face->glyph;
-	advance = glyph->advance;
-
-	// Load the image.
-	FT_Bitmap bits = glyph->bitmap;
-
-	// Bitmap offset information.
-	offset = core::vector2di(glyph->bitmap_left, glyph->bitmap_top);
-
 	// Determine what our texture size should be.
 	// Add 1 because textures are inclusive-exclusive.
 	core::dimension2du d(bits.width + 1, bits.rows + 1);
@@ -78,7 +51,7 @@ void SGUITTGlyph::load(u32 character, FT_Face face, video::IVideoDriver* driver,
 			// Load the monochrome data in.
 			const u32 image_pitch = image->getPitch() / sizeof(u16);
 			u16* image_data = (u16*)image->lock();
-			u8* glyph_data = glyph->bitmap.buffer;
+			u8* glyph_data = bits.buffer;
 			for (s32 y = 0; y < bits.rows; ++y)
 			{
 				u16* row = image_data;
@@ -107,7 +80,7 @@ void SGUITTGlyph::load(u32 character, FT_Face face, video::IVideoDriver* driver,
 			const float gray_count = static_cast<float>(bits.num_grays);
 			const u32 image_pitch = image->getPitch() / sizeof(u32);
 			u32* image_data = (u32*)image->lock();
-			u8* glyph_data = glyph->bitmap.buffer;
+			u8* glyph_data = bits.buffer;
 			for (s32 y = 0; y < bits.rows; ++y)
 			{
 				u8* row = glyph_data;
@@ -122,8 +95,46 @@ void SGUITTGlyph::load(u32 character, FT_Face face, video::IVideoDriver* driver,
 
 		default:
 			// TODO: error message?
-			return;
+			return 0;
 	}
+	return image;
+}
+
+void SGUITTGlyph::load(u32 character, FT_Face face, video::IVideoDriver* driver, u32 size,
+                       core::dimension2du max_texture_size, core::array<CGUITTGlyphPage*>* Glyph_Pages, bool fontHinting,
+                       bool autoHinting, bool useMonochrome)
+{
+	if (isLoaded) return;
+
+	// Set the size of the glyph.
+	FT_Set_Pixel_Sizes(face, 0, size);
+
+	// Set up our loading flags.
+	FT_Int32 loadFlags = FT_LOAD_DEFAULT | FT_LOAD_RENDER;
+	if (!fontHinting) loadFlags |= FT_LOAD_NO_HINTING;
+	if (!autoHinting) loadFlags |= FT_LOAD_NO_AUTOHINT;
+	if (useMonochrome) loadFlags |= FT_LOAD_MONOCHROME | FT_LOAD_TARGET_MONO | FT_RENDER_MODE_MONO;
+	else loadFlags |= FT_LOAD_TARGET_NORMAL;
+
+	// Attempt to load the glyph.
+	if (FT_Load_Glyph(face, character, loadFlags) != FT_Err_Ok)
+		// TODO: error message?
+		return;
+
+	FT_GlyphSlot glyph = face->glyph;
+
+	// Bitmap offset information.
+	advance = glyph->advance;
+	offset = core::vector2di(glyph->bitmap_left, glyph->bitmap_top);
+
+	// Load the image.
+	FT_Bitmap bits = glyph->bitmap;
+
+	// >> refactored by arch.jslin 2010.07.20
+    video::IImage* image = createGlyphImage(bits, driver);
+    if( !image )
+        // TODO: add error message?
+        return;
 
 	// Check to see if we have a free page.
 	CGUITTGlyphPage* page = 0;
