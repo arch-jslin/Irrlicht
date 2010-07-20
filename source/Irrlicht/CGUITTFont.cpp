@@ -115,7 +115,7 @@ CGUITTGlyphPage* SGUITTGlyph::getLastGlyphPage(const core::array<CGUITTGlyphPage
 }
 
 // >> refactored by arch.jslin 2010.07.20
-CGUITTGlyphPage* SGUITTGlyph::createNewGlyphPage
+CGUITTGlyphPage* SGUITTGlyph::createGlyphPage
     (const u32& page_index, const u8& pixel_mode, const FT_Face& face,
      video::IVideoDriver* driver, const u32& font_size, core::dimension2du max_texture_size)
 {
@@ -171,9 +171,65 @@ CGUITTGlyphPage* SGUITTGlyph::createNewGlyphPage
     return page;
 }
 
+void SGUITTGlyph::preload(u32 character, FT_Face face, video::IVideoDriver* driver, u32 size,
+                          core::dimension2du max_texture_size, core::array<CGUITTGlyphPage*>* Glyph_Pages,
+                          bool fontHinting, bool autoHinting, bool useMonochrome)
+{
+    if (isLoaded) return;
+
+	// Set the size of the glyph.
+	FT_Set_Pixel_Sizes(face, 0, size);
+
+	// Set up our loading flags.
+	FT_Int32 loadFlags = FT_LOAD_DEFAULT | FT_LOAD_RENDER;
+	if (!fontHinting) loadFlags |= FT_LOAD_NO_HINTING;
+	if (!autoHinting) loadFlags |= FT_LOAD_NO_AUTOHINT;
+	if (useMonochrome) loadFlags |= FT_LOAD_MONOCHROME | FT_LOAD_TARGET_MONO | FT_RENDER_MODE_MONO;
+	else loadFlags |= FT_LOAD_TARGET_NORMAL;
+
+	// Attempt to load the glyph.
+	if (FT_Load_Glyph(face, character, loadFlags) != FT_Err_Ok)
+		// TODO: error message?
+		return;
+
+	FT_GlyphSlot glyph = face->glyph;
+
+	// Setup the glyph information here:
+	bits    = glyph->bitmap;
+    advance = glyph->advance;
+	offset  = core::vector2di(glyph->bitmap_left, glyph->bitmap_top);
+
+	// Try to get the last page with available slots.
+	// >> refactored by arch.jslin 2010.07.20
+	CGUITTGlyphPage* page = getLastGlyphPage(Glyph_Pages);
+
+	// If we need to make a new page, do that now.
+	if( !page ) {
+        page = createGlyphPage(Glyph_Pages->size(), bits.pixel_mode, face, driver, size, max_texture_size);
+        if( !page ) // what happens if we still don't get glyph page here??
+            // TODO: add error message?
+            return;
+        else
+            Glyph_Pages->push_back(page); // push that new page into our page collection.
+	}
+
+    glyph_page = Glyph_Pages->size() - 1;
+	core::vector2di page_position((page->used_slots % (page->image->getDimension().Width / size)) * size,
+                                  (page->used_slots / (page->image->getDimension().Width / size)) * size);
+	source_rect.UpperLeftCorner  = page_position;
+	source_rect.LowerRightCorner = core::vector2di(page_position.X + bits.width, page_position.Y + bits.rows);
+
+	page->dirty = true;
+	++page->used_slots;
+	--page->available_slots;
+
+	// Set our glyph as loaded.
+	isLoaded = true;
+}
+
 void SGUITTGlyph::load(u32 character, FT_Face face, video::IVideoDriver* driver, u32 size,
-                       core::dimension2du max_texture_size, core::array<CGUITTGlyphPage*>* Glyph_Pages, bool fontHinting,
-                       bool autoHinting, bool useMonochrome)
+                       core::dimension2du max_texture_size, core::array<CGUITTGlyphPage*>* Glyph_Pages,
+                       bool fontHinting, bool autoHinting, bool useMonochrome)
 {
 	if (isLoaded) return;
 
@@ -194,14 +250,10 @@ void SGUITTGlyph::load(u32 character, FT_Face face, video::IVideoDriver* driver,
 
 	FT_GlyphSlot glyph = face->glyph;
 
-	// Load the image.
-	FT_Bitmap bits = glyph->bitmap;
-
-	// >> refactored by arch.jslin 2010.07.20
-    video::IImage* image = createGlyphImage(bits, driver);
-    if( !image )
-        // TODO: add error message?
-        return;
+	// Setup the glyph information here:
+	bits    = glyph->bitmap;
+    advance = glyph->advance;
+	offset  = core::vector2di(glyph->bitmap_left, glyph->bitmap_top);
 
 	// Try to get the last page with available slots.
 	// >> refactored by arch.jslin 2010.07.20
@@ -209,7 +261,7 @@ void SGUITTGlyph::load(u32 character, FT_Face face, video::IVideoDriver* driver,
 
 	// If we need to make a new page, do that now.
 	if( !page ) {
-        page = createNewGlyphPage(Glyph_Pages->size(), bits.pixel_mode, face, driver, size, max_texture_size);
+        page = createGlyphPage(Glyph_Pages->size(), bits.pixel_mode, face, driver, size, max_texture_size);
         if( !page ) // what happens if we still don't get glyph page here??
             // TODO: add error message?
             return;
@@ -217,23 +269,27 @@ void SGUITTGlyph::load(u32 character, FT_Face face, video::IVideoDriver* driver,
             Glyph_Pages->push_back(page); // push that new page into our page collection.
 	}
 
-	// Setup the glyph information here
+    glyph_page = Glyph_Pages->size() - 1;
 	core::vector2di page_position((page->used_slots % (page->image->getDimension().Width / size)) * size,
                                   (page->used_slots / (page->image->getDimension().Width / size)) * size);
 	source_rect.UpperLeftCorner  = page_position;
 	source_rect.LowerRightCorner = core::vector2di(page_position.X + bits.width, page_position.Y + bits.rows);
-	advance    = glyph->advance;
-	offset     = core::vector2di(glyph->bitmap_left, glyph->bitmap_top);
-    glyph_page = Glyph_Pages->size() - 1;
 
-	image->copyTo(page->image, page_position);
-	image->drop();
 	page->dirty = true;
 	++page->used_slots;
 	--page->available_slots;
 
 	// Set our glyph as loaded.
 	isLoaded = true;
+
+	// >> refactored by arch.jslin 2010.07.20
+    video::IImage* image = createGlyphImage(bits, driver);
+    if( !image )
+        // TODO: add error message?
+        return;
+
+	image->copyTo(page->image, page_position);
+	image->drop();
 }
 
 void SGUITTGlyph::unload()

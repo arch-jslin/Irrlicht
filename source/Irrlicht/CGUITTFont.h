@@ -110,6 +110,15 @@ struct SGUITTGlyph
               core::dimension2du max_texture_size, core::array<CGUITTGlyphPage*>* Glyph_Pages,
               bool fontHinting, bool autoHinting, bool useMonochrome);
 
+    //! Preload the glyph:
+    //! Preload process occurs when the program tries to cache the glyph from FT_Library,
+    //! however, it simply defines the SGUITTGlyph's properties, and will create page textures
+    //! if nessesary. But the actual draw to texture process should only occurs right before
+    //! the call to batch drawing.
+    void preload(u32 character, FT_Face face, video::IVideoDriver* driver, u32 size,
+                 core::dimension2du max_texture_size, core::array<CGUITTGlyphPage*>* Glyph_Pages,
+                 bool fontHinting, bool autoHinting, bool useMonochrome);
+
     //! Unloads the glyph.
     void unload();
 
@@ -128,11 +137,14 @@ struct SGUITTGlyph
     // Glyph advance information.
     FT_Vector advance;
 
+    // Glyph Bitmap record.
+    FT_Bitmap bits;
+
 private:
 // >> refactored by arch.jslin 2010.07.20
     video::IImage* createGlyphImage(const FT_Bitmap& bits, video::IVideoDriver* driver);
     CGUITTGlyphPage* getLastGlyphPage(const core::array<CGUITTGlyphPage*>* Glyph_Pages) const;
-    CGUITTGlyphPage* createNewGlyphPage
+    CGUITTGlyphPage* createGlyphPage
         (const u32& page_index, const u8& pixel_mode, const FT_Face& face,
          video::IVideoDriver* driver, const u32& font_size, core::dimension2du max_texture_size);
 };
