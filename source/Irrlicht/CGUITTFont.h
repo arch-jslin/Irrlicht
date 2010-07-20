@@ -131,6 +131,10 @@ struct SGUITTGlyph
 private:
 // >> refactored by arch.jslin 2010.07.20
     video::IImage* createGlyphImage(const FT_Bitmap& bits, video::IVideoDriver* driver);
+    CGUITTGlyphPage* getLastGlyphPage(const core::array<CGUITTGlyphPage*>* Glyph_Pages) const;
+    CGUITTGlyphPage* createNewGlyphPage
+        (const u32& page_index, const u8& pixel_mode, const FT_Face& face,
+         video::IVideoDriver* driver, const u32& font_size, core::dimension2du max_texture_size);
 };
 
 //! Class representing a TrueType font.

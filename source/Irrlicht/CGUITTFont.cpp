@@ -100,6 +100,77 @@ video::IImage* SGUITTGlyph::createGlyphImage(const FT_Bitmap& bits, video::IVide
 	return image;
 }
 
+// >> refactored by arch.jslin 2010.07.20
+CGUITTGlyphPage* SGUITTGlyph::getLastGlyphPage(const core::array<CGUITTGlyphPage*>* Glyph_Pages) const
+{
+	CGUITTGlyphPage* page = 0;
+	if (Glyph_Pages->empty())
+        return 0;
+	else {
+		page = (*Glyph_Pages)[Glyph_Pages->size() - 1];
+		if (page->available_slots == 0)
+			page = 0;
+	}
+    return page;
+}
+
+// >> refactored by arch.jslin 2010.07.20
+CGUITTGlyphPage* SGUITTGlyph::createNewGlyphPage
+    (const u32& page_index, const u8& pixel_mode, const FT_Face& face,
+     video::IVideoDriver* driver, const u32& font_size, core::dimension2du max_texture_size)
+{
+    CGUITTGlyphPage* page = 0;
+    // Name of our page.
+    io::path name("TTFontGlyphPage_");
+    name += face->family_name;
+    name += ".";
+    name += face->style_name;
+    name += ".";
+    name += font_size;
+    name += "_";
+    name += page_index;
+
+    // Create the new page.
+    page = new CGUITTGlyphPage(driver, name);
+
+    // Determine our maximum texture size.
+    // If we keep getting 0, set it to 1024x1024, as that number is pretty safe.
+    if (max_texture_size.Width == 0 || max_texture_size.Height == 0)
+        max_texture_size = driver->getMaxTextureSize();
+    if (max_texture_size.Width == 0 || max_texture_size.Height == 0)
+        max_texture_size = core::dimension2du(1024, 1024);
+
+    // We want to try to put at least 400 glyphs on one texture.
+    core::dimension2du page_texture_size;
+    if (font_size <= 20) page_texture_size = core::dimension2du(512, 512);
+    else if (font_size <= 51) page_texture_size = core::dimension2du(1024, 1024);
+    else if (font_size <= 102) page_texture_size = core::dimension2du(2048, 2048);
+    else if (font_size <= 204) page_texture_size = core::dimension2du(4096, 4096);
+    else page_texture_size = core::dimension2du(8192, 8192);
+
+    if (page_texture_size.Width > max_texture_size.Width || page_texture_size.Height > max_texture_size.Height)
+        page_texture_size = max_texture_size;
+
+    // Create the image for our page.
+    switch (pixel_mode)
+    {
+        case FT_PIXEL_MODE_MONO:
+            page->image = driver->createImage(video::ECF_A1R5G5B5, page_texture_size);
+            page->image->fill(video::SColor(0, 255, 255, 255));
+            break;
+
+        case FT_PIXEL_MODE_GRAY:
+        default:
+            page->image = driver->createImage(video::ECF_A8R8G8B8, page_texture_size);
+            page->image->fill(video::SColor(0, 255, 255, 255));
+            break;
+    }
+
+    // Determine the number of glyph slots on the page and add it to the list of pages.
+    page->available_slots = (page_texture_size.Width / font_size) * (page_texture_size.Height / font_size);
+    return page;
+}
+
 void SGUITTGlyph::load(u32 character, FT_Face face, video::IVideoDriver* driver, u32 size,
                        core::dimension2du max_texture_size, core::array<CGUITTGlyphPage*>* Glyph_Pages, bool fontHinting,
                        bool autoHinting, bool useMonochrome)
@@ -123,10 +194,6 @@ void SGUITTGlyph::load(u32 character, FT_Face face, video::IVideoDriver* driver,
 
 	FT_GlyphSlot glyph = face->glyph;
 
-	// Bitmap offset information.
-	advance = glyph->advance;
-	offset = core::vector2di(glyph->bitmap_left, glyph->bitmap_top);
-
 	// Load the image.
 	FT_Bitmap bits = glyph->bitmap;
 
@@ -136,79 +203,29 @@ void SGUITTGlyph::load(u32 character, FT_Face face, video::IVideoDriver* driver,
         // TODO: add error message?
         return;
 
-	// Check to see if we have a free page.
-	CGUITTGlyphPage* page = 0;
-	bool make_new_page = false;
-	if (Glyph_Pages->empty()) make_new_page = true;
-	else
-	{
-		page = (*Glyph_Pages)[Glyph_Pages->size() - 1];
-		if (page->available_slots == 0)
-		{
-			make_new_page = true;
-			page = 0;
-		}
-	}
+	// Try to get the last page with available slots.
+	// >> refactored by arch.jslin 2010.07.20
+	CGUITTGlyphPage* page = getLastGlyphPage(Glyph_Pages);
 
 	// If we need to make a new page, do that now.
-	if (make_new_page)
-	{
-		// Name of our page.
-		io::path name("TTFontGlyphPage_");
-		name += face->family_name;
-		name += ".";
-		name += face->style_name;
-		name += ".";
-		name += size;
-		name += "_";
-		name += Glyph_Pages->size();
-
-		// Create the new page.
-		page = new CGUITTGlyphPage(driver, name);
-
-		// Determine our maximum texture size.
-		// If we keep getting 0, set it to 2048x2048, as that number is pretty safe.
-		if (max_texture_size.Width == 0 || max_texture_size.Height == 0)
-			max_texture_size = driver->getMaxTextureSize();
-		if (max_texture_size.Width == 0 || max_texture_size.Height == 0)
-			max_texture_size = core::dimension2du(2048, 2048);
-
-		// We want to try to put at least 400 glyphs on one texture.
-		core::dimension2du page_texture_size;
-		if (size <= 20) page_texture_size = core::dimension2du(512, 512);
-		else if (size <= 51) page_texture_size = core::dimension2du(1024, 1024);
-		else if (size <= 102) page_texture_size = core::dimension2du(2048, 2048);
-		else if (size <= 204) page_texture_size = core::dimension2du(4096, 4096);
-		else page_texture_size = core::dimension2du(8192, 8192);
-		if (page_texture_size.Width > max_texture_size.Width || page_texture_size.Height > max_texture_size.Height)
-			page_texture_size = max_texture_size;
-
-		// Create the image for our page.
-		switch (bits.pixel_mode)
-		{
-			case FT_PIXEL_MODE_MONO:
-				page->image = driver->createImage(video::ECF_A1R5G5B5, page_texture_size);
-				page->image->fill(video::SColor(0, 255, 255, 255));
-				//page->image->fill(video::SColor(255, 0, 255, 0));
-				break;
-
-			case FT_PIXEL_MODE_GRAY:
-			default:
-				page->image = driver->createImage(video::ECF_A8R8G8B8, page_texture_size);
-				page->image->fill(video::SColor(0, 255, 255, 255));
-				//page->image->fill(video::SColor(255, 0, 255, 0));
-				break;
-		}
-
-		// Determine the number of glyph slots on the page and add it to the list of pages.
-		page->available_slots = (page_texture_size.Width / size) * (page_texture_size.Height / size);
-		Glyph_Pages->push_back(page);
+	if( !page ) {
+        page = createNewGlyphPage(Glyph_Pages->size(), bits.pixel_mode, face, driver, size, max_texture_size);
+        if( !page ) // what happens if we still don't get glyph page here??
+            // TODO: add error message?
+            return;
+        else
+            Glyph_Pages->push_back(page); // push that new page into our page collection.
 	}
 
-	// Add the glyph to the page.
-	core::vector2di page_position((page->used_slots % (page->image->getDimension().Width / size)) * size, (page->used_slots / (page->image->getDimension().Width / size)) * size);
-	source_rect.UpperLeftCorner = page_position;
+	// Setup the glyph information here
+	core::vector2di page_position((page->used_slots % (page->image->getDimension().Width / size)) * size,
+                                  (page->used_slots / (page->image->getDimension().Width / size)) * size);
+	source_rect.UpperLeftCorner  = page_position;
 	source_rect.LowerRightCorner = core::vector2di(page_position.X + bits.width, page_position.Y + bits.rows);
+	advance    = glyph->advance;
+	offset     = core::vector2di(glyph->bitmap_left, glyph->bitmap_top);
+    glyph_page = Glyph_Pages->size() - 1;
+
 	image->copyTo(page->image, page_position);
 	image->drop();
 	page->dirty = true;
@@ -216,7 +233,6 @@ void SGUITTGlyph::load(u32 character, FT_Face face, video::IVideoDriver* driver,
 	--page->available_slots;
 
 	// Set our glyph as loaded.
-	glyph_page = Glyph_Pages->size() - 1;
 	isLoaded = true;
 }
 
