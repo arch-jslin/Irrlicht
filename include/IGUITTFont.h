@@ -66,10 +66,14 @@ public:
     //!        If false, it tries to use the algorithm specified by the font.
     virtual void setFontHinting(const bool enable, const bool enable_auto_hinting = true) = 0;
 
-    //! Create corresponding character's texture copy from the font,
-    //! so you can use this texture just like any ordinary texture.
-    //! \param The character of the texture you need
-    virtual video::ITexture* createTextureFromChar(const wchar_t ch) const = 0;
+    //! Create corresponding character's software image copy from the font,
+    //! so you can use this data just like any ordinary video::IImage.
+    //! \param ch The character you need
+    virtual video::IImage* createTextureFromChar(const uchar32_t& ch) = 0;
+
+    //! This function is for debugging mostly. If the page doesn't exist it returns zero.
+    //! \param page_index Simply return the texture handle of a given page index.
+    virtual video::ITexture* getPageTextureByIndex(const u32& page_index) const = 0;
 
     //! Returns the dimension of a character produced by this font.
     virtual core::dimension2d<u32> getCharDimension(const wchar_t ch) const = 0;

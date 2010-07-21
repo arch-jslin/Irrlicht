@@ -383,10 +383,9 @@ CGUITTGlyphPage* CGUITTFont::createGlyphPage(const u8& pixel_mode)
     if (max_texture_size.Width == 0 || max_texture_size.Height == 0)
         max_texture_size = core::dimension2du(1024, 1024);
 
-    // Modified: we initially cache around 128 or so glyphs a page.
-    //           if user code can be sure that he has enough system memory and
-    //           wishes to catch more, they can set the page size larger right after
-    //           they added the font by calling setMaxPageTextureSize();
+    // Modified: we cache around 128 or so glyphs a page. So if you only use ASCII characters
+    //           the waste is at minimum. and when you need maybe a few thousand glyphs, there're
+    //           just tens of glyph pages. The performance boost is still not so bad.
     core::dimension2du page_texture_size;
     if (size <= 21) page_texture_size = core::dimension2du(256, 256);
     else if (size <= 42) page_texture_size = core::dimension2du(512, 512);
@@ -813,15 +812,37 @@ void CGUITTFont::setInvisibleCharacters(const core::ustring& s)
 	Invisible = s;
 }
 
-video::ITexture* CGUITTFont::createTextureFromChar(const wchar_t ch) const
+video::IImage* CGUITTFont::createTextureFromChar(const uchar32_t& ch)
 {
-    //u32 n = getGlyphIndexByChar(ch);
-    //return Glyphs[n-1].texture;
+    u32 n = getGlyphIndexByChar(ch);
+    const SGUITTGlyph& glyph = Glyphs[n-1];
+    CGUITTGlyphPage* page = Glyph_Pages[glyph.glyph_page];
 
-    //let's use this method to debug first.
-    u32 n = (u32)ch;
-    if( n < Glyph_Pages.size() )
-        return Glyph_Pages[n]->texture;
+    if( page->dirty )
+        page->updateTexture();
+
+    video::ITexture* tex = page->texture;
+
+    //read-only lock of the corresponding page texture
+    void* ptr = tex->lock(true);
+
+    video::ECOLOR_FORMAT format = tex->getColorFormat();
+    core::dimension2du tex_size = tex->getOriginalSize();
+    video::IImage* pageholder   = Driver->createImageFromData(format, tex_size, ptr, true, false);
+
+    //now we copy that data out of page texture.
+    core::dimension2du glyph_size(glyph.source_rect.getSize());
+    video::IImage* image = Driver->createImage(format, glyph_size);
+    pageholder->copyTo(image, core::position2di(0, 0), glyph.source_rect);
+
+    tex->unlock();
+    return image;
+}
+
+video::ITexture* CGUITTFont::getPageTextureByIndex(const u32& page_index) const
+{
+    if( page_index < Glyph_Pages.size() )
+        return Glyph_Pages[page_index]->texture;
     else
         return 0;
 }
