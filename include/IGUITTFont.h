@@ -66,10 +66,10 @@ public:
     //!        If false, it tries to use the algorithm specified by the font.
     virtual void setFontHinting(const bool enable, const bool enable_auto_hinting = true) = 0;
 
-    //! Get corresponding irrlicht video texture from the font,
-    //! so you can use this font just like any ordinary texture.
+    //! Create corresponding character's texture copy from the font,
+    //! so you can use this texture just like any ordinary texture.
     //! \param The character of the texture you need
-    virtual video::ITexture* getTextureFromChar(const wchar_t ch) const = 0;
+    virtual video::ITexture* createTextureFromChar(const wchar_t ch) const = 0;
 
     //! Returns the dimension of a character produced by this font.
     virtual core::dimension2d<u32> getCharDimension(const wchar_t ch) const = 0;

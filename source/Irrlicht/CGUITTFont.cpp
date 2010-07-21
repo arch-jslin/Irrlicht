@@ -1,3 +1,8 @@
+
+//Last updated by arch.jslin 2010.07.21:
+//   Refactored the glyph loading part, so it doesn't need an additional CImage
+//   object other than the Texture itself.
+
 #include <irrlicht.h>
 #include "CGUITTFont.h"
 
@@ -29,7 +34,7 @@ scene::IMesh*                    CGUITTFont::shared_plane_ptr_ = 0;
 scene::SMesh                     CGUITTFont::shared_plane_;
 
 // >> refactored by arch.jslin 2010.07.20
-video::IImage* SGUITTGlyph::createGlyphImage(video::IVideoDriver* driver)
+video::IImage* SGUITTGlyph::createGlyphImage(const FT_Bitmap& bits, video::IVideoDriver* driver) const
 {
 	// Determine what our texture size should be.
 	// Add 1 because textures are inclusive-exclusive.
@@ -84,15 +89,15 @@ video::IImage* SGUITTGlyph::createGlyphImage(video::IVideoDriver* driver)
 			for (s32 y = 0; y < bits.rows; ++y)
 			{
 				u8* row = glyph_data;
-				for (s32 x = 0; x < bits.width; ++x)
+				for (s32 x = 0; x < bits.width; ++x) {
 					image_data[y * image_pitch + x] |= static_cast<u32>(255.0f * (static_cast<float>(*row++) / gray_count)) << 24;
 					//data[y * image_pitch + x] |= ((u32)(*bitsdata++) << 24);
+				}
 				glyph_data += bits.pitch;
 			}
 			image->unlock();
 			break;
 		}
-
 		default:
 			// TODO: error message?
 			return 0;
@@ -100,50 +105,50 @@ video::IImage* SGUITTGlyph::createGlyphImage(video::IVideoDriver* driver)
 	return image;
 }
 
-void SGUITTGlyph::preload(u32 character, FT_Face face, video::IVideoDriver* driver, u32 size,
-                          core::dimension2du max_texture_size, core::array<CGUITTGlyphPage*>* Glyph_Pages,
-                          const FT_Int32& loadFlags)
+void SGUITTGlyph::preload(u32 char_index, FT_Face face, video::IVideoDriver* driver,
+                          u32 font_size, const FT_Int32& loadFlags)
 {
     if (isLoaded) return;
 
 	// Set the size of the glyph.
-	FT_Set_Pixel_Sizes(face, 0, size);
+	FT_Set_Pixel_Sizes(face, 0, font_size);
 
 	// Attempt to load the glyph.
-	if (FT_Load_Glyph(face, character, loadFlags) != FT_Err_Ok)
+	if (FT_Load_Glyph(face, char_index, loadFlags) != FT_Err_Ok)
 		// TODO: error message?
 		return;
 
 	FT_GlyphSlot glyph = face->glyph;
+    FT_Bitmap    bits  = glyph->bitmap;
 
 	// Setup the glyph information here:
-	bits    = glyph->bitmap;
     advance = glyph->advance;
 	offset  = core::vector2di(glyph->bitmap_left, glyph->bitmap_top);
 
 	// Try to get the last page with available slots.
-	// >> refactored by arch.jslin 2010.07.20
-	CGUITTGlyphPage* page = getLastGlyphPage(Glyph_Pages);
+	CGUITTGlyphPage* page = parent->getLastGlyphPage();
 
 	// If we need to make a new page, do that now.
 	if( !page ) {
-        page = createGlyphPage(Glyph_Pages->size(), bits.pixel_mode, face, driver, size, max_texture_size);
-        if( !page ) // what happens if we still don't get glyph page here??
+        page = parent->createGlyphPage(bits.pixel_mode);
+        if( !page )
             // TODO: add error message?
             return;
-        else
-            Glyph_Pages->push_back(page); // push that new page into our page collection.
 	}
 
-    glyph_page = Glyph_Pages->size() - 1;
-	core::vector2di page_position((page->used_slots % (page->image->getDimension().Width / size)) * size,
-                                  (page->used_slots / (page->image->getDimension().Width / size)) * size);
+    glyph_page = parent->getLastGlyphPageIndex();
+    u32 texture_side_length = page->texture->getOriginalSize().Width;
+	core::vector2di page_position((page->used_slots % (texture_side_length / font_size)) * font_size,
+                                  (page->used_slots / (texture_side_length / font_size)) * font_size);
 	source_rect.UpperLeftCorner  = page_position;
 	source_rect.LowerRightCorner = core::vector2di(page_position.X + bits.width, page_position.Y + bits.rows);
 
 	page->dirty = true;
 	++page->used_slots;
 	--page->available_slots;
+
+    // we catch glyph bitmap here, so the data won't be removed as soon as the next glyph is loaded.
+	surface = createGlyphImage(bits, driver);
 
 	// Set our glyph as loaded.
 	isLoaded = true;
@@ -156,7 +161,8 @@ void SGUITTGlyph::unload()
 
 //////////////////////
 
-CGUITTFont* CGUITTFont::create(IGUIEnvironment *env, const io::path& filename, const u32 size)
+CGUITTFont* CGUITTFont::create(IGUIEnvironment *env, const io::path& filename, const u32 size,
+                               const bool& antialias, const bool& transparency)
 {
 	if (!c_libraryLoaded)
 	{
@@ -166,7 +172,7 @@ CGUITTFont* CGUITTFont::create(IGUIEnvironment *env, const io::path& filename, c
 	}
 
 	CGUITTFont* font = new CGUITTFont(env);
-	bool ret = font->load(filename, size);
+	bool ret = font->load(filename, size, antialias, transparency);
 	if (!ret)
 	{
 		font->drop();
@@ -181,7 +187,7 @@ CGUITTFont* CGUITTFont::create(IGUIEnvironment *env, const io::path& filename, c
 //! constructor
 CGUITTFont::CGUITTFont(IGUIEnvironment *env)
 : use_monochrome(false), use_transparency(true), use_hinting(true), use_auto_hinting(true),
-batch_load_size(100), Environment(env), Driver(0), GlobalKerningWidth(0), GlobalKerningHeight(0)
+batch_load_size(1), Environment(env), Driver(0), GlobalKerningWidth(0), GlobalKerningHeight(0)
 {
 	#ifdef _DEBUG
 	setDebugName("CGUITTFont");
@@ -202,7 +208,7 @@ batch_load_size(100), Environment(env), Driver(0), GlobalKerningWidth(0), Global
 	Glyphs.set_free_when_destroyed(false);
 }
 
-bool CGUITTFont::load(const io::path& filename, const u32 size)
+bool CGUITTFont::load(const io::path& filename, const u32 size, const bool& antialias, const bool& transparency)
 {
 	// Some sanity checks.
 	if (Environment == 0 || Driver == 0) return false;
@@ -212,6 +218,11 @@ bool CGUITTFont::load(const io::path& filename, const u32 size)
 	this->size = size;
 	io::IFileSystem* filesystem = Environment->getFileSystem();
 	this->filename = filename;
+
+    // update the font loading flags when the font is first loaded.
+    this->use_monochrome   = !antialias;
+    this->use_transparency = transparency;
+	update_load_flags();
 
 	// Grab the face.
 	SGUITTFace* face = 0;
@@ -269,6 +280,7 @@ bool CGUITTFont::load(const io::path& filename, const u32 size)
 	for (FT_Long i = 0; i < tt_face->num_glyphs; ++i)
 	{
 		Glyphs[i].isLoaded = false;
+		Glyphs[i].parent = this;
 	}
 
 	// Cache the first 127 ascii characters.
@@ -312,8 +324,6 @@ CGUITTFont::~CGUITTFont()
 
 void CGUITTFont::reset_images()
 {
-    update_load_flags();
-
 	// Delete the glyphs.
 	for (u32 i = 0; i != Glyphs.size(); ++i)
 		Glyphs[i].unload();
@@ -322,6 +332,9 @@ void CGUITTFont::reset_images()
 	for (u32 i = 0; i != Glyph_Pages.size(); ++i)
 		delete Glyph_Pages[i];
 	Glyph_Pages.clear();
+
+    //always update the internal FT loading flags after resetting
+	update_load_flags();
 }
 
 void CGUITTFont::update_glyph_pages() const
@@ -333,22 +346,20 @@ void CGUITTFont::update_glyph_pages() const
 	}
 }
 
-// >> refactored by arch.jslin 2010.07.20
 CGUITTGlyphPage* CGUITTFont::getLastGlyphPage() const
 {
 	CGUITTGlyphPage* page = 0;
 	if (Glyph_Pages.empty())
         return 0;
 	else {
-		page = Glyph_Pages[Glyph_Pages->size() - 1];
+		page = Glyph_Pages[ getLastGlyphPageIndex() ];
 		if (page->available_slots == 0)
 			page = 0;
 	}
     return page;
 }
 
-// >> refactored by arch.jslin 2010.07.20
-CGUITTGlyphPage* CGUITTFont::createGlyphPage(const u32& page_index, const u8& pixel_mode)
+CGUITTGlyphPage* CGUITTFont::createGlyphPage(const u8& pixel_mode)
 {
     CGUITTGlyphPage* page = 0;
     // Name of our page.
@@ -359,7 +370,7 @@ CGUITTGlyphPage* CGUITTFont::createGlyphPage(const u32& page_index, const u8& pi
     name += ".";
     name += size;
     name += "_";
-    name += page_index;
+    name += Glyph_Pages.size(); //the newly created page will be at the end of collection.
 
     // Create the new page.
     page = new CGUITTGlyphPage(Driver, name);
@@ -372,13 +383,16 @@ CGUITTGlyphPage* CGUITTFont::createGlyphPage(const u32& page_index, const u8& pi
     if (max_texture_size.Width == 0 || max_texture_size.Height == 0)
         max_texture_size = core::dimension2du(1024, 1024);
 
-    // We want to try to put at least 400 glyphs on one texture.
+    // Modified: we initially cache around 128 or so glyphs a page.
+    //           if user code can be sure that he has enough system memory and
+    //           wishes to catch more, they can set the page size larger right after
+    //           they added the font by calling setMaxPageTextureSize();
     core::dimension2du page_texture_size;
-    if (size <= 20) page_texture_size = core::dimension2du(512, 512);
-    else if (size <= 51) page_texture_size = core::dimension2du(1024, 1024);
-    else if (size <= 102) page_texture_size = core::dimension2du(2048, 2048);
-    else if (size <= 204) page_texture_size = core::dimension2du(4096, 4096);
-    else page_texture_size = core::dimension2du(8192, 8192);
+    if (size <= 21) page_texture_size = core::dimension2du(256, 256);
+    else if (size <= 42) page_texture_size = core::dimension2du(512, 512);
+    else if (size <= 84) page_texture_size = core::dimension2du(1024, 1024);
+    else if (size <= 168) page_texture_size = core::dimension2du(2048, 2048);
+    else page_texture_size = core::dimension2du(4096, 4096);
 
     if (page_texture_size.Width > max_texture_size.Width || page_texture_size.Height > max_texture_size.Height)
         page_texture_size = max_texture_size;
@@ -387,15 +401,23 @@ CGUITTGlyphPage* CGUITTFont::createGlyphPage(const u32& page_index, const u8& pi
         // TODO: add error message?
         return 0;
 
-    // Determine the number of glyph slots on the page and add it to the list of pages.
-    page->available_slots = (page_texture_size.Width / font) * (page_texture_size.Height / font);
+    if( page ) {
+        // Determine the number of glyph slots on the page and add it to the list of pages.
+        page->available_slots = (page_texture_size.Width / size) * (page_texture_size.Height / size);
+        Glyph_Pages.push_back(page);
+    }
     return page;
+}
+
+void CGUITTFont::setTransparency(const bool flag)
+{
+    use_transparency = flag;
+    reset_images();
 }
 
 void CGUITTFont::setMonochrome(const bool flag)
 {
 	use_monochrome = flag;
-
 	reset_images();
 }
 
@@ -403,7 +425,6 @@ void CGUITTFont::setFontHinting(const bool enable, const bool enable_auto_hintin
 {
 	use_hinting = enable;
 	use_auto_hinting = enable_auto_hinting;
-
 	reset_images();
 }
 
@@ -438,7 +459,7 @@ void CGUITTFont::draw(const core::stringw& text, const core::rect<s32>& position
 
 	// Convert to a unicode string.
 	core::ustring utext(text);
-	u32 utext_size = utext.size();
+	//u32 utext_size = utext.size();
 
 	// Set up our render map.
 	core::map<u32, CGUITTGlyphPage*> Render_Map;
@@ -657,8 +678,7 @@ u32 CGUITTFont::getGlyphIndexByChar(uchar32_t c) const
 	u32 end_pos = start_pos + batch_load_size;
 
 	// Load all our characters.
-	do
-	{
+	do {
 		// Get the character we are going to load.
 		u32 char_index = FT_Get_Char_Index(tt_face, start_pos);
 
@@ -666,15 +686,12 @@ u32 CGUITTFont::getGlyphIndexByChar(uchar32_t c) const
 		if (char_index) {
 		    SGUITTGlyph& glyph = Glyphs[char_index - 1]; // don't we copy here.
 		    if( !glyph.isLoaded ) {
-                glyph.preload(char_index, tt_face, Driver, size, max_page_texture_size, &Glyph_Pages, use_hinting, use_auto_hinting, use_monochrome);
-                CGUITTGlyphPage* page = Glyph_Pages[glyph.glyph_page]->pushGlyphIndexToBeDrawn(char_index);
+                glyph.preload(char_index, tt_face, Driver, size, load_flags);
+                Glyph_Pages[glyph.glyph_page]->pushGlyphToBePaged(&glyph);
 		    }
 		}
 	}
 	while (++start_pos < end_pos);
-
-	// Update any glyph pages that were modified.
-	//update_glyph_pages();
 
 	// Return our original character.
 	return glyph;
@@ -688,7 +705,7 @@ s32 CGUITTFont::getCharacterFromPos(const wchar_t* text, s32 pixel_x) const
 s32 CGUITTFont::getCharacterFromPos(const core::ustring& text, s32 pixel_x) const
 {
 	s32 x = 0;
-	s32 idx = 0;
+	//s32 idx = 0;
 
 	u32 character = 0;
 	uchar32_t previousChar = 0;
@@ -796,12 +813,17 @@ void CGUITTFont::setInvisibleCharacters(const core::ustring& s)
 	Invisible = s;
 }
 
-// >> added by arch_jslin 2010.06.30 ~ 2010.07.05
-video::ITexture* CGUITTFont::getTextureFromChar(const wchar_t ch) const
+video::ITexture* CGUITTFont::createTextureFromChar(const wchar_t ch) const
 {
-    u32 n = getGlyphIndexByChar(ch);
+    //u32 n = getGlyphIndexByChar(ch);
     //return Glyphs[n-1].texture;
-    return 0;
+
+    //let's use this method to debug first.
+    u32 n = (u32)ch;
+    if( n < Glyph_Pages.size() )
+        return Glyph_Pages[n]->texture;
+    else
+        return 0;
 }
 
 void CGUITTFont::createSharedPlane()

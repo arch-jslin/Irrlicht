@@ -7,13 +7,17 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
+//Last updated by arch.jslin 2010.07.21:
+//   Refactored the glyph loading part, so it doesn't need an additional CImage
+//   object other than the Texture itself.
+
 namespace irr
 {
 namespace gui
 {
 
-//forward added by arch_jslin 2010.06.29
 struct SGUITTFace;
+class  CGUITTFont;
 
 // Assists us in deleting Glyphs.
 class CGUITTAssistDelete
@@ -27,16 +31,54 @@ public:
     }
 };
 
+//! Structure representing a single TrueType glyph.
+struct SGUITTGlyph
+{
+    //! Preload the glyph:
+    //! Preload process occurs when the program tries to cache the glyph from FT_Library,
+    //! however, it simply defines the SGUITTGlyph's properties, and will create page textures
+    //! if nessesary. But the actual draw to texture process should only occurs right before
+    //! the call to batch drawing.
+    void preload(u32 char_index, FT_Face face, video::IVideoDriver* driver,
+                 u32 font_size, const FT_Int32& loadFlags);
+
+    //! Unloads the glyph.
+    void unload();
+
+    //! create the Image object from the FT_Bitmap.
+    video::IImage* createGlyphImage(const FT_Bitmap& bits, video::IVideoDriver* driver) const;
+
+    //! If true, the glyph has been loaded.
+    bool isLoaded;
+
+    //! The page the glyph is on.
+    u32 glyph_page;
+
+    //! The source rectangle for the glyph.
+    core::recti source_rect;
+
+    //! The offset of glyph when drawn.
+    core::vector2di offset;
+
+    //! Glyph advance information.
+    FT_Vector advance;
+
+    //! This is just the temporary image holder. after this glyph is paged,
+    //! it will be dropped.
+    video::IImage* surface;
+
+    //! The pointer pointing to the parent (CGUITTFont)
+    CGUITTFont* parent;
+};
+
 //! Holds a sheet of glyphs.
 class CGUITTGlyphPage
 {
 public:
     CGUITTGlyphPage(video::IVideoDriver* Driver, const io::path& texture_name)
-        :image(0), texture(0), available_slots(0), used_slots(0), dirty(false), driver(Driver), name(texture_name) {}
+        :texture(0), available_slots(0), used_slots(0), dirty(false), driver(Driver), name(texture_name) {}
     ~CGUITTGlyphPage()
     {
-        //if (image)
-        //    image->drop();
         if (texture)
         {
             if (driver)
@@ -70,36 +112,39 @@ public:
         return texture ? true : false;
     }
 
-    //! add the glyph index to the collection, used when updateTexture is called.
+    //! add the glyph to the collection, used when updateTexture is called.
     //! this collection will be cleared after updateTexture is called.
-    void pushGlyphIndexToBeDrawn(const u32& index)
+    void pushGlyphToBePaged(const SGUITTGlyph* glyph)
     {
-        glyph_to_be_drawn.push_back(index);
+        glyph_to_be_paged.push_back(glyph);
     }
 
-    //! Updates the texture if dirty.
-    void updateTexture(const core::array<>& )
+    //! Note: Update the texture only when the texture is dirty.
+    void updateTexture()
     {
-        dirty = false;
-        texture->lock();
+        void* ptr                   = texture->lock();
+        video::ECOLOR_FORMAT format = texture->getColorFormat();
+        core::dimension2du size     = texture->getOriginalSize();
+        video::IImage* pageholder   = driver->createImageFromData(format, size, ptr, true, false);
 
-        for(u32 i = 0; i < glyph_to_be_drawn.size(); ++i) {
-
-            // >> refactored by arch.jslin 2010.07.20
-//            video::IImage* image = createGlyphImage(bits, driver);
-//            if( !image )
-//                // TODO: add error message?
-//                return;
-//
-//            image->copyTo(page->image, page_position);
-//            image->drop();
+        for(u32 i = 0; i < glyph_to_be_paged.size(); ++i) {
+            const SGUITTGlyph* glyph = glyph_to_be_paged[i];
+            if( glyph && glyph->isLoaded ) {
+                if( glyph->surface ) {
+                    glyph->surface->copyTo(pageholder, glyph->source_rect.UpperLeftCorner);
+                    glyph->surface->drop();
+                } else {
+                    ; // TODO: add error message?
+                    //currently, if we failed to create the image, just ignore this operation.
+                }
+            }
         }
-
+        pageholder->drop();
         texture->unlock();
-        glyph_to_be_drawn.clear();
+        glyph_to_be_paged.clear();
+        dirty = false;
     }
 
-    //video::IImage* image; //took out by arch.jslin 2010.07.20
     video::ITexture* texture;
     u32 available_slots;
     u32 used_slots;
@@ -107,49 +152,11 @@ public:
 
     core::array<core::vector2di> render_positions;
     core::array<core::recti> render_source_rects;
-    //core::array<u32> glyph_to_be_drawn;
 
 private:
+    core::array<const SGUITTGlyph*> glyph_to_be_paged;
     video::IVideoDriver* driver;
     io::path name;
-};
-
-//! Structure representing a single TrueType glyph.
-struct SGUITTGlyph
-{
-    //! Preload the glyph:
-    //! Preload process occurs when the program tries to cache the glyph from FT_Library,
-    //! however, it simply defines the SGUITTGlyph's properties, and will create page textures
-    //! if nessesary. But the actual draw to texture process should only occurs right before
-    //! the call to batch drawing.
-    void preload(u32 character, FT_Face face, video::IVideoDriver* driver, u32 size,
-                 core::dimension2du max_texture_size, core::array<CGUITTGlyphPage*>* Glyph_Pages,
-                 bool fontHinting, bool autoHinting, bool useMonochrome);
-
-    //! Unloads the glyph.
-    void unload();
-
-// >> refactored by arch.jslin 2010.07.20
-    //! create the Image object from the FT_Bitmap.
-    video::IImage* createGlyphImage(video::IVideoDriver* driver);
-
-    //! If true, the glyph has been loaded.
-    bool isLoaded;
-
-    //! The page the glyph is on.
-    u32 glyph_page;
-
-    //! The source rectangle for the glyph.
-    core::recti source_rect;
-
-    //! The offset of glyph when drawn.
-    core::vector2di offset;
-
-    // Glyph advance information.
-    FT_Vector advance;
-
-    // Glyph Bitmap record.
-    FT_Bitmap bits;
 };
 
 //! Class representing a TrueType font.
@@ -160,8 +167,11 @@ public:
     //! \param env The IGUIEnvironment the font loads out of.
     //! \param filename The filename of the font.
     //! \param size The size of the font glyphs in pixels.  Since this is the size of the individual glyphs, the true height of the font may change depending on the characters used.
+    //! \param antialias set the use_monochrome (opposite to antialias) flag
+    //! \param transparency set the use_transparency flag
     //! \return Returns a pointer to a CGUITTFont.  Will return 0 if the font failed to load.
-    static CGUITTFont* create(IGUIEnvironment *env, const io::path& filename, const u32 size);
+    static CGUITTFont* create(IGUIEnvironment *env, const io::path& filename, const u32 size,
+                              const bool& antialias, const bool& transparency);
 
     //! Destructor
     virtual ~CGUITTFont();
@@ -192,7 +202,7 @@ public:
     //! Tells the font to allow transparency when rendering.
     //! Default: true.
     //! \param flag If true, the font draws using transparency.
-    virtual void setTransparency(const bool flag) { use_transparency = flag; }
+    virtual void setTransparency(const bool flag);
 
     //! Tells the font to use monochrome rendering.
     //! Default: false.
@@ -246,9 +256,21 @@ public:
             Glyph_Pages[i]->updateTexture();
     }
 
-    //! Get corresponding irrlicht video texture from the font,
-    //! so you can use this font just like any ordinary texture.
-    virtual video::ITexture* getTextureFromChar(const wchar_t ch) const;
+    //! Get the last glyph page if there's still available slots.
+    //! If not, it will return zero.
+    CGUITTGlyphPage* getLastGlyphPage() const;
+
+    //! Create a new glyph page texture.
+    //! \param pixel_mode the pixel mode defined by FT_Pixel_Mode
+    //should be better typed. fix later.
+    CGUITTGlyphPage* createGlyphPage(const u8& pixel_mode);
+
+    //! Get the last glyph page's index.
+    u32 getLastGlyphPageIndex() const { return Glyph_Pages.size() - 1; }
+
+    //! Create corresponding character's texture copy from the font,
+    //! so you can use this texture just like any ordinary texture.
+    virtual video::ITexture* createTextureFromChar(const wchar_t ch) const;
 
     //! Add a list of scene nodes generated by putting font textures on the 3D planes.
     virtual core::array<scene::ISceneNode*> addTextSceneNode
@@ -274,7 +296,7 @@ private:
     static scene::SMesh  shared_plane_;
 
     CGUITTFont(IGUIEnvironment *env);
-    bool load(const io::path& filename, const u32 size);
+    bool load(const io::path& filename, const u32 size, const bool& antialias, const bool& transparency);
     void reset_images();
     void update_glyph_pages() const;
     void update_load_flags() {
@@ -285,9 +307,6 @@ private:
         if ( useMonochrome() )   load_flags |= FT_LOAD_MONOCHROME | FT_LOAD_TARGET_MONO | FT_RENDER_MODE_MONO;
         else load_flags |= FT_LOAD_TARGET_NORMAL;
     }
-    CGUITTGlyphPage* getLastGlyphPage() const;
-    CGUITTGlyphPage* createGlyphPage(const u32& page_index, const u8& pixel_mode, core::dimension2du max_texture_size);
-
     u32 getWidthFromCharacter(wchar_t c) const;
     u32 getWidthFromCharacter(uchar32_t c) const;
     u32 getHeightFromCharacter(wchar_t c) const;

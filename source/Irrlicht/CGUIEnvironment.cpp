@@ -1508,16 +1508,12 @@ IGUITTFont* CGUIEnvironment::getFont(const io::path& filename, u32 fontsize, boo
 		return 0;
 	}
 
-	CGUITTFont* font = CGUITTFont::create(this, tf.NamedPath.getPath(), tf.size);
+	CGUITTFont* font = CGUITTFont::create(this, tf.NamedPath.getPath(), tf.size, antialias, transparency);
 
 	if(!font)
 		return 0;
 
-	font->setTransparency(transparency);
-	font->setMonochrome(!antialias);
-
 	// add to fonts.
-
 	tf.Font = font;
 	TTFonts.push_back(tf);
 
