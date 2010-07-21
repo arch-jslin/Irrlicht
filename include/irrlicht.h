@@ -184,8 +184,8 @@
 #include "vector2d.h"
 #include "vector3d.h"
 #if defined(_IRR_COMPILE_WITH_CGUITTFONT_) // >> IrrlichtML modification 2010.06.29
-#include "IGUITTFont.h"
 #include "irrUString.h"
+#include "IGUITTFont.h"
 #endif // <<
 
 /*! \mainpage Irrlicht Engine 1.7.1 API documentation
