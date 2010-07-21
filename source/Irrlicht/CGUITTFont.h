@@ -35,8 +35,8 @@ public:
         :image(0), texture(0), available_slots(0), used_slots(0), dirty(false), driver(Driver), name(texture_name) {}
     ~CGUITTGlyphPage()
     {
-        if (image)
-            image->drop();
+        //if (image)
+        //    image->drop();
         if (texture)
         {
             if (driver)
@@ -45,50 +45,61 @@ public:
         }
     }
 
-    //! Updates the texture if dirty.
-    void updateTexture()
+    //! Create the actual page texture,
+    bool createPageTexture(const u8& pixel_mode, const core::dimension2du& texture_size)
     {
-        static u32 test = 0;
-        dirty = false;
+        if( texture )
+            return false;
 
-        // Save our texture creation flags and disable mipmaps.
-        bool flg16 = driver->getTextureCreationFlag(video::ETCF_ALWAYS_16_BIT);
-        bool flg32 = driver->getTextureCreationFlag(video::ETCF_ALWAYS_32_BIT);
         bool flgmip = driver->getTextureCreationFlag(video::ETCF_CREATE_MIP_MAPS);
         driver->setTextureCreationFlag(video::ETCF_CREATE_MIP_MAPS, false);
 
-        // Set the texture color format.
-        switch (image->getColorFormat())
+        // Set the texture color format
+        switch (pixel_mode)
         {
-            case video::ECF_A1R5G5B5:
-                // We want to create a 16-bit texture.
-                driver->setTextureCreationFlag(video::ETCF_ALWAYS_16_BIT, true);
-                driver->setTextureCreationFlag(video::ETCF_ALWAYS_32_BIT, false);
+            case FT_PIXEL_MODE_MONO:
+                texture = driver->addTexture(texture_size, name, video::ECF_A1R5G5B5);
                 break;
-
-            case video::ECF_A8R8G8B8:
+            case FT_PIXEL_MODE_GRAY:
             default:
-                // We want to create a 32-bit texture.
-                driver->setTextureCreationFlag(video::ETCF_ALWAYS_16_BIT, false);
-                driver->setTextureCreationFlag(video::ETCF_ALWAYS_32_BIT, true);
+                texture = driver->addTexture(texture_size, name, video::ECF_A8R8G8B8);
                 break;
         }
-
-        // Add the texture.
-        if (texture)
-        {
-            driver->setMaterial(video::SMaterial());
-            driver->removeTexture(texture);
-        }
-        texture = driver->addTexture(name, image);
-
         // Restore our texture creation flags.
         driver->setTextureCreationFlag(video::ETCF_CREATE_MIP_MAPS, flgmip);
-        driver->setTextureCreationFlag(video::ETCF_ALWAYS_32_BIT, flg32);
-        driver->setTextureCreationFlag(video::ETCF_ALWAYS_16_BIT, flg16);
+        return texture ? true : false;
     }
 
-    video::IImage* image;
+    //! add the glyph index to the collection, used when updateTexture is called.
+    //! this collection will be cleared after updateTexture is called.
+    void pushGlyphIndexToBeDrawn(const u32& index)
+    {
+        glyph_to_be_drawn.push_back(index);
+    }
+
+    //! Updates the texture if dirty.
+    void updateTexture(const core::array<>& )
+    {
+        dirty = false;
+        texture->lock();
+
+        for(u32 i = 0; i < glyph_to_be_drawn.size(); ++i) {
+
+            // >> refactored by arch.jslin 2010.07.20
+//            video::IImage* image = createGlyphImage(bits, driver);
+//            if( !image )
+//                // TODO: add error message?
+//                return;
+//
+//            image->copyTo(page->image, page_position);
+//            image->drop();
+        }
+
+        texture->unlock();
+        glyph_to_be_drawn.clear();
+    }
+
+    //video::IImage* image; //took out by arch.jslin 2010.07.20
     video::ITexture* texture;
     u32 available_slots;
     u32 used_slots;
@@ -96,6 +107,7 @@ public:
 
     core::array<core::vector2di> render_positions;
     core::array<core::recti> render_source_rects;
+    //core::array<u32> glyph_to_be_drawn;
 
 private:
     video::IVideoDriver* driver;
@@ -105,11 +117,6 @@ private:
 //! Structure representing a single TrueType glyph.
 struct SGUITTGlyph
 {
-    //! Loads the glyph.
-    void load(u32 character, FT_Face face, video::IVideoDriver* driver, u32 size,
-              core::dimension2du max_texture_size, core::array<CGUITTGlyphPage*>* Glyph_Pages,
-              bool fontHinting, bool autoHinting, bool useMonochrome);
-
     //! Preload the glyph:
     //! Preload process occurs when the program tries to cache the glyph from FT_Library,
     //! however, it simply defines the SGUITTGlyph's properties, and will create page textures
@@ -121,6 +128,10 @@ struct SGUITTGlyph
 
     //! Unloads the glyph.
     void unload();
+
+// >> refactored by arch.jslin 2010.07.20
+    //! create the Image object from the FT_Bitmap.
+    video::IImage* createGlyphImage(video::IVideoDriver* driver);
 
     //! If true, the glyph has been loaded.
     bool isLoaded;
@@ -139,14 +150,6 @@ struct SGUITTGlyph
 
     // Glyph Bitmap record.
     FT_Bitmap bits;
-
-private:
-// >> refactored by arch.jslin 2010.07.20
-    video::IImage* createGlyphImage(const FT_Bitmap& bits, video::IVideoDriver* driver);
-    CGUITTGlyphPage* getLastGlyphPage(const core::array<CGUITTGlyphPage*>* Glyph_Pages) const;
-    CGUITTGlyphPage* createGlyphPage
-        (const u32& page_index, const u8& pixel_mode, const FT_Face& face,
-         video::IVideoDriver* driver, const u32& font_size, core::dimension2du max_texture_size);
 };
 
 //! Class representing a TrueType font.
@@ -274,6 +277,16 @@ private:
     bool load(const io::path& filename, const u32 size);
     void reset_images();
     void update_glyph_pages() const;
+    void update_load_flags() {
+        // Set up our loading flags.
+        load_flags = FT_LOAD_DEFAULT | FT_LOAD_RENDER;
+        if ( !useHinting() )     load_flags |= FT_LOAD_NO_HINTING;
+        if ( !useAutoHinting() ) load_flags |= FT_LOAD_NO_AUTOHINT;
+        if ( useMonochrome() )   load_flags |= FT_LOAD_MONOCHROME | FT_LOAD_TARGET_MONO | FT_RENDER_MODE_MONO;
+        else load_flags |= FT_LOAD_TARGET_NORMAL;
+    }
+    CGUITTGlyphPage* getLastGlyphPage() const;
+    CGUITTGlyphPage* createGlyphPage(const u32& page_index, const u8& pixel_mode, core::dimension2du max_texture_size);
 
     u32 getWidthFromCharacter(wchar_t c) const;
     u32 getWidthFromCharacter(uchar32_t c) const;
@@ -292,6 +305,7 @@ private:
     io::path filename;
     FT_Face tt_face;
     FT_Size_Metrics font_metrics;
+    FT_Int32 load_flags;
 
     mutable core::array<CGUITTGlyphPage*> Glyph_Pages;
     mutable core::array<SGUITTGlyph> Glyphs;
