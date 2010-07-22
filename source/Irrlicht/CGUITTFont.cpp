@@ -105,8 +105,8 @@ video::IImage* SGUITTGlyph::createGlyphImage(const FT_Bitmap& bits, video::IVide
     return image;
 }
 
-void SGUITTGlyph::preload(u32 char_index, FT_Face face, video::IVideoDriver* driver,
-                          u32 font_size, const FT_Int32& loadFlags)
+void SGUITTGlyph::preload(const u32& char_index, FT_Face face, video::IVideoDriver* driver,
+                          const u32& font_size, const FT_Int32& loadFlags)
 {
     if (isLoaded) return;
 
@@ -130,7 +130,7 @@ void SGUITTGlyph::preload(u32 char_index, FT_Face face, video::IVideoDriver* dri
 
     // If we need to make a new page, do that now.
     if( !page ) {
-        page = parent->createGlyphPage(bits.pixel_mode);
+        page = parent->createGlyphPage(static_cast<FT_Pixel_Mode>(bits.pixel_mode));
         if( !page )
             // TODO: add error message?
             return;
@@ -161,7 +161,7 @@ void SGUITTGlyph::unload()
 
 //////////////////////
 
-CGUITTFont* CGUITTFont::create(IGUIEnvironment *env, const io::path& filename, const u32 size,
+CGUITTFont* CGUITTFont::create(IGUIEnvironment *env, const io::path& filename, const u32& size,
                                const bool& antialias, const bool& transparency)
 {
     if (!c_libraryLoaded)
@@ -359,7 +359,7 @@ CGUITTGlyphPage* CGUITTFont::getLastGlyphPage() const
     return page;
 }
 
-CGUITTGlyphPage* CGUITTFont::createGlyphPage(const u8& pixel_mode)
+CGUITTGlyphPage* CGUITTFont::createGlyphPage(const FT_Pixel_Mode& pixel_mode)
 {
     CGUITTGlyphPage* page = 0;
     // Name of our page.
@@ -408,19 +408,19 @@ CGUITTGlyphPage* CGUITTFont::createGlyphPage(const u8& pixel_mode)
     return page;
 }
 
-void CGUITTFont::setTransparency(const bool flag)
+void CGUITTFont::setTransparency(const bool& flag)
 {
     use_transparency = flag;
     reset_images();
 }
 
-void CGUITTFont::setMonochrome(const bool flag)
+void CGUITTFont::setMonochrome(const bool& flag)
 {
     use_monochrome = flag;
     reset_images();
 }
 
-void CGUITTFont::setFontHinting(const bool enable, const bool enable_auto_hinting)
+void CGUITTFont::setFontHinting(const bool& enable, const bool& enable_auto_hinting)
 {
     use_hinting = enable;
     use_auto_hinting = enable_auto_hinting;
@@ -536,7 +536,7 @@ void CGUITTFont::draw(const core::stringw& text, const core::rect<s32>& position
     }
 }
 
-core::dimension2d<u32> CGUITTFont::getCharDimension(const wchar_t ch) const
+core::dimension2d<u32> CGUITTFont::getCharDimension(const uchar32_t& ch) const
 {
     return core::dimension2d<u32>( getWidthFromCharacter(ch), getHeightFromCharacter(ch) );
 }
@@ -812,7 +812,7 @@ void CGUITTFont::setInvisibleCharacters(const core::ustring& s)
     Invisible = s;
 }
 
-video::IImage* CGUITTFont::createTextureFromChar(const uchar32_t& ch)
+video::IImage* CGUITTFont::createImageFromChar(const uchar32_t& ch)
 {
     u32 n = getGlyphIndexByChar(ch);
     const SGUITTGlyph& glyph = Glyphs[n-1];
@@ -880,8 +880,7 @@ void CGUITTFont::createSharedPlane()
     buf->drop(); //the addMeshBuffer method will grab it, so we can drop this ptr.
 }
 
-core::dimension2d<u32>
-CGUITTFont::getDimensionUntilEndOfLine(const wchar_t* p) const
+core::dimension2d<u32> CGUITTFont::getDimensionUntilEndOfLine(const wchar_t* p) const
 {
     core::stringw s;
     for(const wchar_t* temp = p; temp && *temp != '\0' && *temp != L'\r' && *temp != L'\n'; ++temp )
@@ -890,8 +889,29 @@ CGUITTFont::getDimensionUntilEndOfLine(const wchar_t* p) const
     return getDimension(s.c_str());
 }
 
+core::dimension2d<u32> CGUITTFont::getDimensionUntilEndOfLine(core::ustring::const_iterator it) const
+{
+    u32 start_pos = it.getPos();
+    while( *it != static_cast<uchar32_t>('\0') &&
+           *it != static_cast<uchar32_t>('\r') &&
+           *it != static_cast<uchar32_t>('\n') )
+    {
+        ++it;
+    }
+    u32 end_pos = it.getPos() - 1; //exclude the line ending chars.
+    return getDimension( core::ustring( &(it.getRef().c_str()[start_pos]), end_pos - start_pos) );
+}
+
 core::array<scene::ISceneNode*> CGUITTFont::addTextSceneNode
-    (const wchar_t* text, scene::ISceneManager* smgr, scene::ISceneNode* parent, const video::SColor& color, bool center)
+    (const wchar_t* text, scene::ISceneManager* smgr, scene::ISceneNode* parent,
+     const video::SColor& color, const bool& center)
+{
+    return addTextSceneNode(core::ustring(text), smgr, parent, color, center);
+}
+
+core::array<scene::ISceneNode*> CGUITTFont::addTextSceneNode
+    (const core::ustring& text, scene::ISceneManager* smgr, scene::ISceneNode* parent,
+     const video::SColor& color, const bool& center)
 {
     using namespace core;
     using namespace video;
@@ -919,7 +939,7 @@ core::array<scene::ISceneNode*> CGUITTFont::addTextSceneNode
     if( center ) {
         offset.X = start_point.X = -text_size.Width / 2.f;
         offset.Y = start_point.Y = +text_size.Height/ 2.f;
-        offset.X += ( text_size.Width - getDimensionUntilEndOfLine(text).Width ) >> 1;
+        offset.X += ( text_size.Width - getDimensionUntilEndOfLine(text.begin()).Width ) >> 1;
     }
 
     //the default font material
@@ -932,18 +952,18 @@ core::array<scene::ISceneNode*> CGUITTFont::addTextSceneNode
     mat.MaterialTypeParam = 0.01f;
     mat.DiffuseColor = color;
 
-    wchar_t current_char = 0, previous_char = 0;
+    uchar32_t current_char = 0, previous_char = 0;
     u32 n = 0;
 
     array<u32> glyph_indices;
-
-    while( *text ) {
-        current_char = *text;
+    core::ustring::const_iterator iter(text);
+    while( !iter.atEnd() ) {
+        current_char = *iter;
         bool line_break=false;
         if ( current_char == L'\r' ) { // Mac or Windows breaks
             line_break = true;
-            if ( *(text + 1) == L'\n' )	// Windows line breaks.
-                current_char = *(++text);
+            if ( *(iter + 1) == L'\n' )	// Windows line breaks.
+                current_char = *(++iter);
         }
         else if ( current_char == L'\n' ) { // Unix breaks
             line_break = true;
@@ -954,9 +974,9 @@ core::array<scene::ISceneNode*> CGUITTFont::addTextSceneNode
             offset.Y -= tt_face->size->metrics.ascender / 64;
             offset.X =  start_point.X;
             if (center) {
-                offset.X += ( text_size.Width - getDimensionUntilEndOfLine(text+1).Width ) >> 1;
+                offset.X += ( text_size.Width - getDimensionUntilEndOfLine(iter+1).Width ) >> 1;
             }
-            ++text;
+            ++iter;
         }
         else {
             n = getGlyphIndexByChar(current_char);
@@ -995,7 +1015,7 @@ core::array<scene::ISceneNode*> CGUITTFont::addTextSceneNode
             }
             offset.X += getWidthFromCharacter(current_char);
             previous_char = current_char;
-            ++text;
+            ++iter;
         }
     }
 
