@@ -63,7 +63,7 @@ struct SGUITTGlyph
 
     //! This is just the temporary image holder. after this glyph is paged,
     //! it will be dropped.
-    video::IImage* surface;
+    mutable video::IImage* surface;
 
     //! The pointer pointing to the parent (CGUITTFont)
     CGUITTFont* parent;
@@ -141,6 +141,7 @@ public:
                 if( glyph->surface ) {
                     glyph->surface->copyTo(pageholder, glyph->source_rect.UpperLeftCorner);
                     glyph->surface->drop();
+                    glyph->surface = 0;  //NOTICE: because of this, surface has to be mutable
                 } else {
                     ; // TODO: add error message?
                     //currently, if we failed to create the image, just ignore this operation.

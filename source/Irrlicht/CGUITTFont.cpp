@@ -156,6 +156,8 @@ void SGUITTGlyph::preload(const u32& char_index, FT_Face face, video::IVideoDriv
 
 void SGUITTGlyph::unload()
 {
+    if( isLoaded && surface )
+        surface->drop();
     isLoaded = false;
 }
 
