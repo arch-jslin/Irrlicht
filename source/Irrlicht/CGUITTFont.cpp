@@ -900,7 +900,7 @@ core::dimension2d<u32> CGUITTFont::getDimensionUntilEndOfLine(core::ustring::con
     {
         ++it;
     }
-    u32 end_pos = it.getPos() - 1; //exclude the line ending chars.
+    u32 end_pos = it.getPos();  //DO NOT exclude the line ending chars.
     return getDimension( core::ustring( &(it.getRef().c_str()[start_pos]), end_pos - start_pos) );
 }
 
