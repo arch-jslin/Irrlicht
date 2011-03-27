@@ -13,7 +13,7 @@ BinPath = ../../bin/$(SYSTEM)
 
 # general compiler settings (might need to be set when compiling the lib, too)
 # preprocessor flags, e.g. defines and include paths
-USERCPPFLAGS =
+USERCPPFLAGS = -lfreetype
 # compiler flags such as optimization flags
 USERCXXFLAGS = -O3 -ffast-math
 #USERCXXFLAGS = -g -Wall
