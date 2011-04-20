@@ -20,3 +20,8 @@ irrKlang-1.0.4
 
 # library's binary dll on win32
 irrlicht/bin
+
+# library and binary files on Linux
+bin
+lib
+*.so.*

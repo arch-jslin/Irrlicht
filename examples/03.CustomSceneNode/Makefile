@@ -5,7 +5,7 @@ Target = 03.CustomSceneNode
 Sources = main.cpp
 
 # general compiler settings
-CPPFLAGS = -I../../include -I/usr/X11R6/include
+CPPFLAGS = -I../../include -I/usr/X11R6/include -L/usr/lib/mesa
 CXXFLAGS = -O3 -ffast-math
 #CXXFLAGS = -g -Wall
 
@@ -17,7 +17,7 @@ LIBSELECT=64
 endif
 
 # target specific settings
-all_linux: LDFLAGS = -L/usr/X11R6/lib$(LIBSELECT) -L../../lib/Linux -lIrrlicht -lGL -lXxf86vm -lXext -lX11
+all_linux: LDFLAGS = -L/usr/X11R6/lib$(LIBSELECT) -L../../lib/Linux -lIrrlicht -lGL -lXxf86vm -lXext -lX11 -lfreetype
 all_linux clean_linux: SYSTEM=Linux
 all_win32: LDFLAGS = -L../../lib/Win32-gcc -lIrrlicht -lopengl32 -lm
 all_win32 clean_win32: SYSTEM=Win32-gcc

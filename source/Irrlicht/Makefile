@@ -52,6 +52,8 @@ LINKOBJ = $(IRRMESHOBJ) $(IRROBJ) $(IRRPARTICLEOBJ) $(IRRANIMOBJ) \
 	$(IRRGUIOBJ) $(ZLIBOBJ) $(JPEGLIBOBJ) $(LIBPNGOBJ) $(LIBAESGM) \
 	$(BZIP2OBJ) $(EXTRAOBJ) CGUITTFont.o
 
+NDEBUG = true
+
 ###############
 #Compiler flags
 CXXINCS = -I../../include -I. -Izlib -Ijpeglib -Ilibpng
@@ -82,7 +84,7 @@ LIB_PATH = ../../lib/$(SYSTEM)
 INSTALL_DIR = /usr/local/lib
 sharedlib install: SHARED_LIB = libIrrlicht.so
 staticlib sharedlib: LDFLAGS += --no-export-all-symbols --add-stdcall-alias
-sharedlib: LDFLAGS += -L/usr/X11R6/lib$(LIBSELECT) -lGL -lXxf86vm
+sharedlib: LDFLAGS += -L/usr/X11R6/lib$(LIBSELECT) -L/usr/lib/mesa -lGL -lXxf86vm
 staticlib sharedlib: CXXINCS += -I/usr/X11R6/include
 
 #OSX specific options

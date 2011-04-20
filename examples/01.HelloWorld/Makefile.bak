@@ -13,12 +13,12 @@ BinPath = ../../bin/$(SYSTEM)
 
 # general compiler settings (might need to be set when compiling the lib, too)
 # preprocessor flags, e.g. defines and include paths
-USERCPPFLAGS = -L/usr/lib/mesa -lfreetype
+USERCPPFLAGS = -lfreetype
 # compiler flags such as optimization flags
 USERCXXFLAGS = -O3 -ffast-math
 #USERCXXFLAGS = -g -Wall
 # linker flags such as additional libraries and link paths
-USERLDFLAGS = 
+USERLDFLAGS =
 
 ####
 #no changes necessary below this line
