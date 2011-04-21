@@ -2,7 +2,7 @@
 Target = Demo
 Sources = CDemo.cpp CMainMenu.cpp main.cpp
 
-CPPFLAGS = -I../../include -I/usr/X11R6/include
+CPPFLAGS = -I../../include -I/usr/X11R6/include -L/usr/lib/mesa -lfreetype
 CXXFLAGS = -Wall -O3 -ffast-math
 
 ifeq ($(HOSTTYPE), x86_64)

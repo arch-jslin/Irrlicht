@@ -5,7 +5,7 @@ Target = 12.TerrainRendering
 Sources = main.cpp
 
 # general compiler settings
-CPPFLAGS = -I../../include -I/usr/X11R6/include
+CPPFLAGS = -I../../include -I/usr/X11R6/include -L/usr/lib/mesa -lfreetype
 CXXFLAGS = -O3 -ffast-math
 #CXXFLAGS = -g -Wall
 
