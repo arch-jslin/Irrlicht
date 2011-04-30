@@ -58,7 +58,7 @@ NDEBUG = true
 #Compiler flags
 CXXINCS = -I../../include -I. -Izlib -Ijpeglib -Ilibpng
 CPPFLAGS += $(CXXINCS) -DIRRLICHT_EXPORTS=1
-CXXFLAGS += -Wall -pipe -fno-exceptions -fno-rtti -fstrict-aliasing
+CXXFLAGS += -Wall -pipe -fno-exceptions -fno-rtti -fstrict-aliasing -fPIC
 ifndef NDEBUG
 CXXFLAGS += -g -D_DEBUG
 else
@@ -67,7 +67,7 @@ endif
 ifdef PROFILE
 CXXFLAGS += -pg
 endif
-CFLAGS := -O3 -fexpensive-optimizations -DPNG_THREAD_UNSAFE_OK -DPNG_NO_MMX_CODE -DPNG_NO_MNG_FEATURES
+CFLAGS := -O3 -fexpensive-optimizations -DPNG_THREAD_UNSAFE_OK -DPNG_NO_MMX_CODE -DPNG_NO_MNG_FEATURES -fPIC
 
 sharedlib sharedlib_osx: CXXFLAGS += -fPIC
 sharedlib sharedlib_osx: CFLAGS += -fPIC
