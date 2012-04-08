@@ -21,6 +21,13 @@
 #endif
 #if defined(_IRR_OSX_PLATFORM_)
 	#include <OpenGL/gl.h>
+        //arch.jslin in case it's not in your OSX's glext.h 04.08.12
+	#ifndef GL_ARB_sync
+	#define GL_ARB_sync
+	#include <stdint.h>
+	typedef int64_t GLint64;
+	typedef uint64_t GLint64;
+	#endif
 #else
 	#include <GL/gl.h>
 #endif
