@@ -25,3 +25,6 @@ irrlicht/bin
 bin
 lib
 *.so.*
+
+# build files on mac
+source/Irrlicht/MacOSX/build/
