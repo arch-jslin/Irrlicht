@@ -21,6 +21,12 @@ public:
 	//! destructor
 	virtual ~IGUITTFont() {}
 
+	//! Calculates the width and height of a given string of text.
+	//! Using core::ustring as unicode interface.
+	/** \return Returns width and height of the area covered by the text if
+	it would be drawn. */
+	virtual core::dimension2d<u32> getDimension(const core::ustring& text) const = 0;
+
     //! Sets the amount of glyphs to batch load.
     //! When a new glyph is loaded, the class also loads extra glyphs which surround
     //! the target glyph. For example, if batch_size is set to 50 and you try to load glyph 100,
