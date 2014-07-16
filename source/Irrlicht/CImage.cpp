@@ -378,7 +378,7 @@ void CImage::copyToScalingBoxFilter(IImage* target, s32 bias, bool blend)
 //! fills the surface with given color
 void CImage::fill(const SColor &color)
 {
-	u32 c;
+	u32 c = 0;
 
 	switch ( Format )
 	{
