@@ -433,10 +433,13 @@
 		<VirtualTargets>
 			<Add alias="All" targets="Win32 - Debug - dll;Win32 - Release - accurate math - dll;Win32 - Release - fast math - dll;" />
 		</VirtualTargets>
+		<Compiler>
+			<Add directory="..\..\include\freetype" />
+		</Compiler>
 		<Linker>
 			<Add library="freetype" />
 			<Add library="imm32" />
-			<Add directory="C:\libs\cpp\freetype-2.3.12\objs" />
+			<Add directory="C:\libs\cpp\freetype-2.5.3\objs" />
 		</Linker>
 		<Unit filename="..\..\changes.txt" />
 		<Unit filename="..\..\include\CDynamicMeshBuffer.h" />
@@ -602,11 +605,15 @@
 		<Unit filename="..\..\include\freetype\config\ftoption.h" />
 		<Unit filename="..\..\include\freetype\config\ftstdlib.h" />
 		<Unit filename="..\..\include\freetype\freetype.h" />
+		<Unit filename="..\..\include\freetype\ft2build.h" />
 		<Unit filename="..\..\include\freetype\ftadvanc.h" />
+		<Unit filename="..\..\include\freetype\ftautoh.h" />
 		<Unit filename="..\..\include\freetype\ftbbox.h" />
 		<Unit filename="..\..\include\freetype\ftbdf.h" />
 		<Unit filename="..\..\include\freetype\ftbitmap.h" />
+		<Unit filename="..\..\include\freetype\ftbzip2.h" />
 		<Unit filename="..\..\include\freetype\ftcache.h" />
+		<Unit filename="..\..\include\freetype\ftcffdrv.h" />
 		<Unit filename="..\..\include\freetype\ftchapters.h" />
 		<Unit filename="..\..\include\freetype\ftcid.h" />
 		<Unit filename="..\..\include\freetype\fterrdef.h" />
@@ -634,6 +641,7 @@
 		<Unit filename="..\..\include\freetype\ftsynth.h" />
 		<Unit filename="..\..\include\freetype\ftsystem.h" />
 		<Unit filename="..\..\include\freetype\fttrigon.h" />
+		<Unit filename="..\..\include\freetype\ftttdrv.h" />
 		<Unit filename="..\..\include\freetype\fttypes.h" />
 		<Unit filename="..\..\include\freetype\ftwinfnt.h" />
 		<Unit filename="..\..\include\freetype\ftxf86.h" />
@@ -651,7 +659,6 @@
 		<Unit filename="..\..\include\freetype\internal\fttrace.h" />
 		<Unit filename="..\..\include\freetype\internal\ftvalid.h" />
 		<Unit filename="..\..\include\freetype\internal\internal.h" />
-		<Unit filename="..\..\include\freetype\internal\pcftypes.h" />
 		<Unit filename="..\..\include\freetype\internal\psaux.h" />
 		<Unit filename="..\..\include\freetype\internal\pshints.h" />
 		<Unit filename="..\..\include\freetype\internal\services\svbdf.h" />
@@ -663,6 +670,7 @@
 		<Unit filename="..\..\include\freetype\internal\services\svotval.h" />
 		<Unit filename="..\..\include\freetype\internal\services\svpfr.h" />
 		<Unit filename="..\..\include\freetype\internal\services\svpostnm.h" />
+		<Unit filename="..\..\include\freetype\internal\services\svprop.h" />
 		<Unit filename="..\..\include\freetype\internal\services\svpscmap.h" />
 		<Unit filename="..\..\include\freetype\internal\services\svpsinfo.h" />
 		<Unit filename="..\..\include\freetype\internal\services\svsfnt.h" />
